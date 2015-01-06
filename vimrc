@@ -12,7 +12,7 @@ set wildmenu
 set wildignorecase "case insensitive filename completion
 set wrap               "dont wrap lines
 set linebreak          "wrap lines at convenient points
-set nu
+set number
 set guitablabel=%t
 set ts=2               " Tabs are 2 spaces
 set bs=2               " Backspace over everything in insert mode
@@ -63,7 +63,7 @@ if executable('ag')
   let g:ctrlp_lazy_update  = 350
 
   " ag is fast enough that CtrlP doesn't need to cache
-  " let g:ctrlp_use_caching = 0
+  let g:ctrlp_use_caching = 0
 endif
 
 " For HTML
@@ -86,6 +86,7 @@ Plugin 'tpope/vim-rails'
 Plugin 'tpope/vim-endwise'
 Plugin 'tpope/vim-eunuch'
 Plugin 'tpope/vim-abolish'
+Plugin 'tpope/vim-surround'
 " Plugin 'scrooloose/nerdtree'
 Plugin 'Valloric/YouCompleteMe'
 Plugin 'junegunn/vim-easy-align'
@@ -112,6 +113,7 @@ map gn :bn<cr>
 map gp :bp<cr>
 map gd :bd<cr>
 map gs :CtrlPBuffer<cr>
+imap jk <Esc>
 
 
 nmap <leader>y :CtrlPBuffer<cr>
@@ -129,7 +131,7 @@ colorscheme solarized
 let g:airline_powerline_fonts = 1
 let g:airline#extensions#tabline#enabled = 1
 let g:syntastic_always_populate_loc_list = 1
-let g:EclimCompletionMethod = 'omnifunc' " YCM + Eclim
+let g:syntastic_ruby_checkers=['mri', 'rubocop']
 let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
 
 syntax on

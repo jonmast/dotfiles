@@ -24,3 +24,9 @@ cscope.files
 cscope.out
 cscope.in.out
 cscope.po.out
+# Zeus stuff
+custom_plan.rb
+zeus.json
+#lockfile
+*.lck
+*.pid

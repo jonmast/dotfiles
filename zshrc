@@ -1,11 +1,11 @@
 # Path to your oh-my-zsh configuration.
-ZSH=$HOME/.oh-my-zsh
+source ~/.dotfiles/antigen/antigen.zsh
 # [[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm"
 # Set name of the theme to load.
 # Look in ~/.oh-my-zsh/themes/
 # Optionally, if you set this to "random", it'll load a random theme each
 # time that oh-my-zsh is loaded.
-ZSH_THEME="agnoster"
+ZSH_THEME="blinks"
 DEFAULT_USER="jon"
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
@@ -32,9 +32,18 @@ COMPLETION_WAITING_DOTS="true"
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git rvm archlinux bundler vi-mode tmuxinator virtualenvwrapper)
+antigen use oh-my-zsh
+antigen bundle git
+antigen bundle rvm
+antigen bundle bundler
+antigen bundle vi-mode
+antigen bundle tmuxinator
+antigen bundle zsh-users/zsh-syntax-highlighting
+antigen bundle archlinux
+antigen theme blinks
+antigen apply
+
 setopt no_hist_verify
-source $ZSH/oh-my-zsh.sh
 source $HOME/.bash_aliases
 #set my custom ls colors
 eval $( dircolors -b $HOME/.LS_COLORS )

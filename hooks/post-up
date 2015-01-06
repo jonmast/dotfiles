@@ -4,6 +4,3 @@ if [ ! -e $HOME/.vim/bundle/Vundle.vim ]; then
   git clone https://github.com/gmarik/vundle.git $HOME/.vim/bundle/Vundle.vim
 fi
 vim  +BundleInstall +qa
-if [ ! -e $HOME/.oh-my-zsh ]; then
-  git clone https://github.com/robbyrussell/oh-my-zsh.git $HOME/.oh-my-zsh
-fi
