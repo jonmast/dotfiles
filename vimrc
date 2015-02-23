@@ -3,6 +3,8 @@ set ai                 " set auto-indenting on for programming
 set hlsearch           " highlight searches
 set incsearch          " do incremental searching
 set showmatch          " jump to matches when entering regexp
+set ignorecase         " Case insensitive search
+set smartcase          " Case sensitive if search contains capitals
 set mouse=a
 set laststatus=2
 set noshowmode
@@ -13,6 +15,7 @@ set wildignorecase "case insensitive filename completion
 set wrap               "dont wrap lines
 set linebreak          "wrap lines at convenient points
 set number
+set relativenumber
 set guitablabel=%t
 set ts=2               " Tabs are 2 spaces
 set bs=2               " Backspace over everything in insert mode
@@ -66,59 +69,52 @@ if executable('ag')
   let g:ctrlp_use_caching = 0
 endif
 
-" For HTML
-autocmd FileType html set omnifunc=htmlcomplete#CompleteTags
+if filereadable(expand('~/.vim_bundles'))
+  source ~/.vim_bundles
+endif
 
-" For CSS
-autocmd BufNewFile,BufRead *.scss set ft=scss.css
+augroup vimrcEx
+  autocmd!
 
+  " For HTML
+  autocmd FileType html set omnifunc=htmlcomplete#CompleteTags
 
-set rtp+=~/.vim/bundle/Vundle.vim/
-call vundle#begin()
+  autocmd VimResized * :wincmd =
+  " When editing a file, always jump to the last known cursor position.
+  " Don't do it for commit messages, when the position is invalid, or when
+  " inside an event handler (happens when dropping a file on gvim).
+  autocmd BufReadPost *
+    \ if &ft != 'gitcommit' && line("'\"") > 0 && line("'\"") <= line("$") |
+    \   exe "normal g`\"" |
+    \ endif
+  autocmd BufRead,BufNewFile *.md set filetype=markdown
+  autocmd FileType markdown setlocal spell
+  autocmd BufRead,BufNewFile *.md setlocal textwidth=80
+  autocmd FileType gitcommit setlocal spell
+  " Allow stylesheets to autocomplete hyphenated words
+  autocmd FileType css,scss,sass setlocal iskeyword+=-
+augroup END
 
-" let Vundle manage Vundle
-Plugin 'gmarik/Vundle.vim'
-
-" My bundles here:
-Plugin 'scrooloose/syntastic'
-Plugin 'tpope/vim-obsession'
-Plugin 'tpope/vim-rails'
-Plugin 'tpope/vim-endwise'
-Plugin 'tpope/vim-eunuch'
-Plugin 'tpope/vim-abolish'
-Plugin 'tpope/vim-surround'
-" Plugin 'scrooloose/nerdtree'
-Plugin 'Valloric/YouCompleteMe'
-Plugin 'junegunn/vim-easy-align'
-Plugin 'bling/vim-airline'
-Plugin 'kien/ctrlp.vim'
-Plugin 'ap/vim-css-color'
-Plugin 'ntpeters/vim-better-whitespace'
-Plugin 'tomtom/tcomment_vim'
-Plugin 'jwhitley/vim-colors-solarized'
-Plugin 'airblade/vim-gitgutter'
-Plugin 'kchmck/vim-coffee-script'
-Plugin 'FelikZ/ctrlp-py-matcher'
-Plugin 'christoomey/vim-tmux-navigator'
-Plugin 'sjl/gundo.vim'
-Plugin 'tpope/vim-dispatch'
-Plugin 'thoughtbot/vim-rspec'
-call vundle#end()
-
+runtime macros/matchit.vim
 nnoremap <F5> :GundoToggle<CR>
-inoremap <C-s> <esc>:w<cr>a
+inoremap <C-s> <esc>:w<cr>
 vmap <Enter> <Plug>(EasyAlign)
 " quick access buffer stuff
 map gn :bn<cr>
 map gp :bp<cr>
-map gd :bd<cr>
+map gd :Bdelete<cr>
 map gs :CtrlPBuffer<cr>
 imap jk <Esc>
 
 
 nmap <leader>y :CtrlPBuffer<cr>
 nmap <leader>f :CtrlPMRUFiles<cr>
+nmap <leader>rm :CtrlPModels<cr>
+nmap <leader>rc :CtrlPControllers<cr>
+nmap <leader>rv :CtrlPViews<cr>
 nmap <Leader>e :e <C-R>=expand("%:p:h") . "/" <CR>
+nmap <Leader>h :nohl<CR>
+nmap <Leader>v :e ~/.vimrc<CR>
 
 " RSpec.vim mappings
 map <Leader>t :call RunCurrentSpecFile()<CR>
@@ -126,13 +122,25 @@ map <Leader>s :call RunNearestSpec()<CR>
 map <Leader>l :call RunLastSpec()<CR>
 map <Leader>a :call RunAllSpecs()<CR>
 
+let g:rspec_command = "Dispatch rspec {spec}"
+
+" map semicolon to colon
+
+nnoremap ; :
+
 set background=dark
 colorscheme solarized
 let g:airline_powerline_fonts = 1
-let g:airline#extensions#tabline#enabled = 1
 let g:syntastic_always_populate_loc_list = 1
 let g:syntastic_ruby_checkers=['mri', 'rubocop']
 let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
+
+let g:ycm_key_list_select_completion=['<C-n>', '<Down>']
+let g:ycm_key_list_previous_completion=['<C-p>', '<Up>']
+
+let g:UltiSnipsExpandTrigger="<Tab>"
+let g:UltiSnipsJumpForwardTrigger="<Tab>"
+let g:UltiSnipsJumpBackwardTrigger="<S-Tab>"
 
 syntax on
 filetype on
