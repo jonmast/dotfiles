@@ -36,10 +36,15 @@ antigen use oh-my-zsh
 antigen bundle git
 antigen bundle rvm
 antigen bundle bundler
+antigen bundle capistrano
+antigen bundle history-substring-search
 antigen bundle vi-mode
 antigen bundle tmuxinator
 antigen bundle zsh-users/zsh-syntax-highlighting
 antigen bundle archlinux
+antigen bundle rails
+antigen bundle wd
+antigen bundle autojump
 antigen theme blinks
 antigen apply
 
@@ -60,6 +65,6 @@ export _JAVA_OPTIONS='-Dawt.useSystemAAFontSettings=gasp'
 export TERM="xterm-256color"
 alias tmux="tmux -2" #hopefully fix strange vim+tmux issues
 PATH=$PATH:$HOME/.rvm/bin # Add RVM to PATH for scripting
-PATH=$PATH:$HOME/dev/android-studio/sdk/platform-tools:$HOME/dev/android-studio/sdk/tools:$HOME/dev/android-studio/bin # android studio and sdk
+PATH=$PATH:$HOME/dev/android-studio/sdk/platform-tools:$HOME/dev/android-studio/sdk/tools:$HOME/dev/android-studio/bin:./bin # android studio and sdk
 [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
 bindkey "^R" history-incremental-search-backward
