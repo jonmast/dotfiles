@@ -93,11 +93,13 @@ augroup vimrcEx
   autocmd FileType gitcommit setlocal spell
   " Allow stylesheets to autocomplete hyphenated words
   autocmd FileType css,scss,sass setlocal iskeyword+=-
+  " Question marks are valid in ruby metods
+  autocmd FileType ruby,eruby setlocal iskeyword+=?
 augroup END
 
 runtime macros/matchit.vim
 nnoremap <F5> :GundoToggle<CR>
-inoremap <C-s> <esc>:w<cr>
+noremap <C-s> <esc>:w<cr>
 vmap <Enter> <Plug>(EasyAlign)
 " quick access buffer stuff
 map gn :bn<cr>
@@ -106,7 +108,7 @@ map gd :Bdelete<cr>
 map gs :CtrlPBuffer<cr>
 imap jk <Esc>
 
-
+let mapleader = ' '
 nmap <leader>y :CtrlPBuffer<cr>
 nmap <leader>f :CtrlPMRUFiles<cr>
 nmap <leader>rm :CtrlPModels<cr>
@@ -114,7 +116,13 @@ nmap <leader>rc :CtrlPControllers<cr>
 nmap <leader>rv :CtrlPViews<cr>
 nmap <Leader>e :e <C-R>=expand("%:p:h") . "/" <CR>
 nmap <Leader>h :nohl<CR>
-nmap <Leader>v :e ~/.vimrc<CR>
+nmap <Leader>v :tabe ~/.vimrc<CR>
+nmap <Leader>w :w<CR>
+
+" System clipboard mappings
+vmap <Leader>y "+y
+nmap <Leader>p "+p
+nmap <Leader>P "+P
 
 " RSpec.vim mappings
 map <Leader>t :call RunCurrentSpecFile()<CR>
@@ -137,6 +145,7 @@ let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
 
 let g:ycm_key_list_select_completion=['<C-n>', '<Down>']
 let g:ycm_key_list_previous_completion=['<C-p>', '<Up>']
+let g:rubycomplete_rails = 1
 
 let g:UltiSnipsExpandTrigger="<Tab>"
 let g:UltiSnipsJumpForwardTrigger="<Tab>"

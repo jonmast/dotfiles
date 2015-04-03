@@ -28,3 +28,4 @@ alias gae=/home/mast/Downloads/google_appengine/appcfg.py
 alias vi=vim
 alias ya=yaourt
 alias gci='git commit'
+alias vims='vim -S Session.vim'

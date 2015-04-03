@@ -7,3 +7,10 @@
 	excludesfile = ~/.gitignore_global
 [alias]
 	unstage = reset HEAD --
+  ctags = "!sh -c '[ -f .git/hooks/ctags ] || git init; .git/hooks/ctags' git-ctags"
+[blame]
+	date = relative
+[init]
+	templatedir = /home/jon/.git_template
+[merge]
+  ff = only

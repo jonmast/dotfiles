@@ -45,10 +45,12 @@ antigen bundle archlinux
 antigen bundle rails
 antigen bundle wd
 antigen bundle autojump
+antigen bundle hchbaw/opp.zsh
 antigen theme blinks
 antigen apply
 
 setopt no_hist_verify
+stty -ixon
 source $HOME/.bash_aliases
 #set my custom ls colors
 eval $( dircolors -b $HOME/.LS_COLORS )
@@ -68,3 +70,4 @@ PATH=$PATH:$HOME/.rvm/bin # Add RVM to PATH for scripting
 PATH=$PATH:$HOME/dev/android-studio/sdk/platform-tools:$HOME/dev/android-studio/sdk/tools:$HOME/dev/android-studio/bin:./bin # android studio and sdk
 [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
 bindkey "^R" history-incremental-search-backward
+xcape -e 'Caps_Lock=Escape'
