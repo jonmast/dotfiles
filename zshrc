@@ -70,4 +70,3 @@ PATH=$PATH:$HOME/.rvm/bin # Add RVM to PATH for scripting
 PATH=$PATH:$HOME/dev/android-studio/sdk/platform-tools:$HOME/dev/android-studio/sdk/tools:$HOME/dev/android-studio/bin:./bin # android studio and sdk
 [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
 bindkey "^R" history-incremental-search-backward
-xcape -e 'Caps_Lock=Escape'
