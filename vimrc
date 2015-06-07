@@ -130,15 +130,16 @@ map <Leader>s :call RunNearestSpec()<CR>
 map <Leader>l :call RunLastSpec()<CR>
 map <Leader>a :call RunAllSpecs()<CR>
 
-let g:rspec_command = "Dispatch rspec {spec}"
+let g:rspec_command = "Dispatch bin/rspec {spec}"
 
 " map semicolon to colon
-
 nnoremap ; :
+
+" bind K to grep word under cursor
+nnoremap K :grep! "\b<C-R><C-W>\b"<CR>:cw<CR>
 
 set background=dark
 colorscheme solarized
-let g:airline_powerline_fonts = 1
 let g:syntastic_always_populate_loc_list = 1
 let g:syntastic_ruby_checkers=['mri', 'rubocop']
 let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
