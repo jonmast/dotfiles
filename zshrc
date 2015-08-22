@@ -29,4 +29,12 @@ export PATH=$PATH:$HOME/.rvm/bin:$HOME/dev/Android/Sdk/platform-tools:./bin
 
 export TERM="xterm-256color"
 alias tmux="tmux -2" #hopefully fix strange vim+tmux issues
+
+# vi-mode disables this
 bindkey "^R" history-incremental-search-backward
+
+# Keybindings for history serarch
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
+bindkey -M vicmd 'k' history-substring-search-up
+bindkey -M vicmd 'j' history-substring-search-down
