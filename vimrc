@@ -132,13 +132,13 @@ vmap <Leader>y "+y
 nmap <Leader>p "+p
 nmap <Leader>P "+P
 
-" RSpec.vim mappings
-map <Leader>t :call RunCurrentSpecFile()<CR>
-map <Leader>s :call RunNearestSpec()<CR>
-map <Leader>l :call RunLastSpec()<CR>
-map <Leader>a :call RunAllSpecs()<CR>
+" test mappings
+map <Leader>t :TestFile()<CR>
+map <Leader>s :TestNearest()<CR>
+map <Leader>l :TestLast()<CR>
+map <Leader>a :TestSuite()<CR>
 
-let g:rspec_command = "Dispatch bin/rspec {spec}"
+let test#strategy = "dispatch"
 
 " map semicolon to colon
 nnoremap ; :
