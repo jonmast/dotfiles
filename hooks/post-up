@@ -2,7 +2,4 @@
 cd ~/.dotfiles
 git submodule init
 git submodule update
-if [ ! -e $HOME/.vim/bundle/Vundle.vim ]; then
-  git clone https://github.com/gmarik/vundle.git $HOME/.vim/bundle/Vundle.vim
-fi
-vim  +BundleInstall +qa
+vim  +PlugInstall +qa
