@@ -119,6 +119,14 @@ nmap <Leader>h :nohl<CR>
 nmap <Leader>v :tabe ~/.vimrc<CR>
 nmap <Leader>w :w<CR>
 
+"Git shortcuts
+nmap <leader>gs :Gstatus<cr>
+nmap <leader>ga :Git add
+nmap <leader>gp :Gpush<cr>
+nmap <leader>gc :Gcommit -v<cr>
+nmap <leader>gc :Gcommit -v<cr>
+nmap <leader>gq :Git add -A<cr>:Gcommit -v<cr>
+
 " System clipboard mappings
 vmap <Leader>y "+y
 nmap <Leader>p "+p
