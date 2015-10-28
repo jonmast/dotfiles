@@ -133,10 +133,10 @@ nmap <Leader>p "+p
 nmap <Leader>P "+P
 
 " test mappings
-map <Leader>t :TestFile()<CR>
-map <Leader>s :TestNearest()<CR>
-map <Leader>l :TestLast()<CR>
-map <Leader>a :TestSuite()<CR>
+map <Leader>t :TestFile<CR>
+map <Leader>s :TestNearest<CR>
+map <Leader>l :TestLast<CR>
+map <Leader>a :TestSuite<CR>
 
 let test#strategy = "dispatch"
 
