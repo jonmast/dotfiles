@@ -154,6 +154,8 @@ let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
 
 let g:ycm_key_list_select_completion=['<C-n>', '<Down>']
 let g:ycm_key_list_previous_completion=['<C-p>', '<Up>']
+let g:ycm_collect_identifiers_from_tags_files = 1
+let g:ycm_seed_identifiers_with_syntax = 1
 let g:rubycomplete_rails = 1
 
 let g:UltiSnipsExpandTrigger="<Tab>"
