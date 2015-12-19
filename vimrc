@@ -102,46 +102,48 @@ nnoremap <F5> :GundoToggle<CR>
 noremap <C-s> <esc>:w<cr>
 vmap <Enter> <Plug>(EasyAlign)
 " quick access buffer stuff
-map gn :bn<cr>
-map gp :bp<cr>
-map gd :Bdelete<cr>
-map gs :CtrlPBuffer<cr>
-imap jk <Esc>
+nnoremap gn :bn<cr>
+nnoremap gp :bp<cr>
+nnoremap gd :Bdelete<cr>
+nnoremap gs :CtrlPBuffer<cr>
 
 let mapleader = ' '
-nmap <leader>y :CtrlPBuffer<cr>
-nmap <leader>f :CtrlPMRUFiles<cr>
-nmap <leader>rm :CtrlPModels<cr>
-nmap <leader>rc :CtrlPControllers<cr>
-nmap <leader>rv :CtrlPViews<cr>
-nmap <Leader>e :e <C-R>=expand("%:p:h") . "/" <CR>
-nmap <Leader>h :nohl<CR>
-nmap <Leader>v :tabe ~/.vimrc<CR>
-nmap <Leader>w :w<CR>
+nnoremap <leader>y :CtrlPBuffer<cr>
+nnoremap <leader>f :CtrlPMRUFiles<cr>
+nnoremap <leader>rm :CtrlPModels<cr>
+nnoremap <leader>rc :CtrlPControllers<cr>
+nnoremap <leader>rv :CtrlPViews<cr>
+nnoremap <Leader>e :e <C-R>=expand("%:p:h") . "/" <CR>
+nnoremap <Leader>h :nohl<CR>
+nnoremap <Leader>v :tabe ~/.vimrc<CR>
+nnoremap <Leader>w :w<CR>
 
 "Git shortcuts
-nmap <leader>gs :Gstatus<cr>
-nmap <leader>ga :Git add
-nmap <leader>gp :Gpush<cr>
-nmap <leader>gc :Gcommit -v<cr>
-nmap <leader>gc :Gcommit -v<cr>
-nmap <leader>gq :Git add -A<cr>:Gcommit -v<cr>
+nnoremap <leader>gs :Gstatus<cr>
+nnoremap <leader>ga :Git add
+nnoremap <leader>gp :Gpush<cr>
+nnoremap <leader>gc :Gcommit -v<cr>
+nnoremap <leader>gc :Gcommit -v<cr>
+nnoremap <leader>gq :Git add -A<cr>:Gcommit -v<cr>
 
 " System clipboard mappings
 vmap <Leader>y "+y
-nmap <Leader>p "+p
-nmap <Leader>P "+P
+nnoremap <Leader>p "+p
+nnoremap <Leader>P "+P
 
 " test mappings
-map <Leader>t :TestFile<CR>
-map <Leader>s :TestNearest<CR>
-map <Leader>l :TestLast<CR>
-map <Leader>a :TestSuite<CR>
+nnoremap <Leader>t :TestFile<CR>
+nnoremap <Leader>s :TestNearest<CR>
+nnoremap <Leader>l :TestLast<CR>
+nnoremap <Leader>a :TestSuite<CR>
 
 let test#strategy = "dispatch"
 
-" map semicolon to colon
+call camelcasemotion#CreateMotionMappings(',')
+
+" reverse semicolon and colon
 nnoremap ; :
+nnoremap : ;
 
 " bind K to grep word under cursor
 nnoremap K :grep! "\b<C-R><C-W>\b"<CR>:cw<CR>
