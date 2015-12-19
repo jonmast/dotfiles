@@ -8,6 +8,7 @@
 [alias]
 	unstage = reset HEAD --
   ctags = "!sh -c '[ -f .git/hooks/ctags ] || git init; .git/hooks/ctags' git-ctags"
+  publish = push -u origin HEAD
 [blame]
 	date = relative
 [init]
