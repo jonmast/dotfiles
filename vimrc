@@ -1,8 +1,6 @@
-set nocompatible       " be iMproved
-set ai                 " set auto-indenting on for programming
 set hlsearch           " highlight searches
 set incsearch          " do incremental searching
-set showmatch          " jump to matches when entering regexp
+set showmatch          " jump to matching brackets
 set ignorecase         " Case insensitive search
 set smartcase          " Case sensitive if search contains capitals
 set mouse=a
@@ -18,10 +16,9 @@ set number
 set relativenumber
 set guitablabel=%t
 set ts=2               " Tabs are 2 spaces
-set bs=2               " Backspace over everything in insert mode
+set bs=indent,eol,start
 set shiftwidth=2       " Tabs under smart indent
-set nocp               incsearch
-set formatoptions=tcqr
+set formatoptions+=j
 set autoindent
 set smarttab
 set expandtab
@@ -32,7 +29,8 @@ set sidescroll=1
 
 "hide buffers when not displayed
 set hidden
-set history=256        " Number of things to remember in history.
+set history=2000        " Number of things to remember in history.
+set ttimeout
 set ttimeoutlen=100     " Time to wait after ESC (default causes an annoying delay)
 set completeopt=longest,menuone
 
@@ -41,6 +39,11 @@ set splitright
 
 set novisualbell       " No blinking .
 set noerrorbells       " No noise.
+set autoread
+set viminfo^=!
+set display+=lastline
+set list
+set listchars=tab:>\ ,trail:-,extends:>,precedes:<,nbsp:+
 
 " gvim specific
 set mousehide  " Hide mouse after chars typed
