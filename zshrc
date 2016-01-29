@@ -19,6 +19,8 @@ antigen theme blinks
 antigen apply
 
 setopt no_hist_verify
+HISTSIZE=1000000
+SAVEHIST=1000000
 stty -ixon
 source $HOME/.aliases
 #set my custom ls colors
