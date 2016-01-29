@@ -37,5 +37,6 @@ Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
 Plug 'bkad/CamelCaseMotion'
 Plug 'mattn/emmet-vim'
 Plug 'sheerun/vim-polyglot'
+Plug 'AndrewRadev/splitjoin.vim'
 call plug#end()
 filetype on
