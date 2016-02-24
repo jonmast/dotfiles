@@ -27,8 +27,6 @@ set scrolloff=3
 set sidescrolloff=7
 set sidescroll=1
 
-"hide buffers when not displayed
-set hidden
 set history=2000        " Number of things to remember in history.
 set ttimeout
 set ttimeoutlen=100     " Time to wait after ESC (default causes an annoying delay)
@@ -147,6 +145,8 @@ call camelcasemotion#CreateMotionMappings(',')
 " reverse semicolon and colon
 nnoremap ; :
 nnoremap : ;
+vnoremap ; :
+vnoremap : ;
 
 " bind K to grep word under cursor
 nnoremap K :grep! "\b<C-R><C-W>\b"<CR>:cw<CR>
