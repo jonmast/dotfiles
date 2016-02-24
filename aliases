@@ -2,6 +2,7 @@
 alias g='git'
 alias ga='git add'
 alias gps='git push'
+unalias gp
 alias gpl='git pull'
 alias gl='git log'
 alias gg='gl --decorate --oneline --graph --date-order --all'
@@ -26,3 +27,6 @@ alias ya=yaourt
 alias gci='git commit -v'
 alias gcd='git checkout develop'
 alias vims='vim -S Session.vim'
+alias dc=docker-compose
+alias v=vim
+alias gpb='git publish'
