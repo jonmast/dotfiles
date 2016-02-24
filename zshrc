@@ -1,5 +1,8 @@
 # load rvm
 [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
+export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
+export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
+
 # Load antigen
 source ~/.dotfiles/antigen/antigen.zsh
 DEFAULT_USER="jon"
@@ -15,6 +18,7 @@ antigen bundle zsh-users/zsh-syntax-highlighting
 antigen bundle archlinux
 antigen bundle rails
 antigen bundle autojump
+antigen bundle djui/alias-tips
 antigen theme blinks
 antigen apply
 
