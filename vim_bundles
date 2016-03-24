@@ -20,7 +20,8 @@ Plug 'tpope/vim-dispatch'
 Plug 'tpope/vim-repeat'
 Plug 'Valloric/YouCompleteMe', {'do': 'python2 install.py'}
 Plug 'junegunn/vim-easy-align'
-Plug 'bling/vim-airline'
+Plug 'vim-airline/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
 Plug 'ctrlpvim/ctrlp.vim'
 Plug 'FelikZ/ctrlp-py-matcher'
 Plug 'iurifq/ctrlp-rails.vim'
@@ -39,5 +40,6 @@ Plug 'bkad/CamelCaseMotion'
 Plug 'mattn/emmet-vim'
 Plug 'sheerun/vim-polyglot'
 Plug 'AndrewRadev/splitjoin.vim'
+Plug 'ecomba/vim-ruby-refactoring'
 call plug#end()
 filetype on
