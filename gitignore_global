@@ -1,13 +1,13 @@
-#kate
-# Swap Files #
-.*.kate-swp
-.swp.*
 #Vim
-[._]*.s[a-w][a-z]
-[._]s[a-w][a-z]
+[.]*.s[a-w][a-z]
+[.]s[a-w][a-z]
 *.un~
 Session.vim
 .netrwhist
+
+# RubyMine
+.idea/
+
 *~
 .directory
 #ctags stuff
