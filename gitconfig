@@ -15,3 +15,8 @@
 	templatedir = /home/jon/.git_template
 [merge]
   ff = only
+	tool = vimdiff
+[mergetool]
+	keepBackup = false
+[mergetool "fugitive"]
+	cmd = vim -f -c \"Gdiff\" \"$MERGED\"

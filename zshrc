@@ -17,6 +17,7 @@ antigen bundle vi-mode
 antigen bundle zsh-users/zsh-syntax-highlighting
 antigen bundle archlinux
 antigen bundle rails
+antigen bundle mix-fast
 antigen bundle autojump
 antigen bundle djui/alias-tips
 antigen theme blinks
@@ -25,19 +26,40 @@ antigen apply
 setopt no_hist_verify
 HISTSIZE=1000000
 SAVEHIST=1000000
+
+# Pass special characters through if no files match
+# This allows using parameters like HEAD^ without quoting
+unsetopt nomatch
 stty -ixon
 source $HOME/.aliases
 #set my custom ls colors
 eval $( dircolors -b $HOME/.LS_COLORS )
 # Customize to your needs...
-export EDITOR=vim
-export PATH=$PATH:$HOME/.rvm/bin:$HOME/dev/Android/Sdk/platform-tools:./bin
+export EDITOR=nvim
+export PATH=.git/safe/../../bin:$PATH:$HOME/.rvm/bin:$HOME/dev/Android/Sdk/platform-tools:$HOME/.local/bin:./bin
 
-export TERM="xterm-256color"
+# export TERM="xterm-256color"
 alias tmux="tmux -2" #hopefully fix strange vim+tmux issues
 
-# vi-mode disables this
-bindkey "^R" history-incremental-search-backward
+source /usr/share/fzf/key-bindings.zsh
+
+# fbr - checkout git branch (including remote branches)
+fbr() {
+  local branches branch
+  branches=$(git branch --all | grep -v HEAD) &&
+  branch=$(echo "$branches" |
+           fzf-tmux -d $(( 2 + $(wc -l <<< "$branches") )) +m) &&
+  git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
+}
+
+ir() {
+  local project_root
+  project_root=$(git rev-parse --show-toplevel || pwd)
+  invoker list |
+    grep "$project_root " |
+    awk -F '|' '{ print $5 }' |
+    xargs invoker reload
+}
 
 # Keybindings for history serarch
 bindkey '^[[A' history-substring-search-up

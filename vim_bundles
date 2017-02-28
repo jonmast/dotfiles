@@ -7,7 +7,7 @@ endif
 filetype off
 
 call plug#begin()
-Plug 'scrooloose/syntastic'
+Plug 'neomake/neomake'
 Plug 'tpope/vim-obsession'
 Plug 'tpope/vim-rails'
 Plug 'tpope/vim-endwise', {'for': 'ruby'}
@@ -18,7 +18,10 @@ Plug 'tpope/vim-bundler'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-dispatch'
 Plug 'tpope/vim-repeat'
-Plug 'Valloric/YouCompleteMe', {'do': 'python2 install.py'}
+Plug 'tpope/vim-projectionist'
+Plug 'tpope/vim-sleuth'
+Plug 'tpope/vim-unimpaired'
+Plug 'Valloric/YouCompleteMe'
 Plug 'junegunn/vim-easy-align'
 Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
@@ -41,5 +44,9 @@ Plug 'mattn/emmet-vim'
 Plug 'sheerun/vim-polyglot'
 Plug 'AndrewRadev/splitjoin.vim'
 Plug 'ecomba/vim-ruby-refactoring'
+Plug 'avdgaag/vim-phoenix'
+Plug 'dbext.vim'
+Plug 'KabbAmine/zeavim.vim'
+Plug 'editorconfig/editorconfig-vim'
 call plug#end()
 filetype on
