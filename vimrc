@@ -1,3 +1,4 @@
+set rtp^=/usr/share/vim/vimfiles/
 set hlsearch           " highlight searches
 set incsearch          " do incremental searching
 set showmatch          " jump to matching brackets
@@ -43,6 +44,8 @@ set display+=lastline
 set list
 set listchars=tab:>\ ,trail:-,extends:>,precedes:<,nbsp:+
 
+set inccommand=nosplit
+
 " gvim specific
 set mousehide  " Hide mouse after chars typed
 if v:version >= 703
@@ -63,11 +66,13 @@ if executable('ag')
   set grepprg=ag\ --nogroup\ --nocolor
 
   " Use ag in CtrlP for listing files. Lightning fast and respects .gitignore
-  let g:ctrlp_user_command = 'ag %s -l --nocolor -g "" --ignore "*.png" --ignore "*.jpg" --ignore "*.svg"'
-  let g:ctrlp_lazy_update  = 350
+  let g:ctrlp_user_command = '/usr/bin/rg --color=never --files %s'
 
   " ag is fast enough that CtrlP doesn't need to cache
   let g:ctrlp_use_caching = 0
+
+  " Ack.vim adds some niceties for searching
+  let g:ackprg = 'ag --vimgrep'
 endif
 
 if filereadable(expand('~/.vim_bundles'))
@@ -95,21 +100,18 @@ augroup vimrcEx
   " Allow stylesheets to autocomplete hyphenated words
   autocmd FileType css,scss,sass setlocal iskeyword+=-
   " Question marks are valid in ruby metods
-  autocmd FileType ruby,eruby setlocal iskeyword+=?
+  " The question mark causes issues with tag jumping in vim-ruby, disabling
+  " for now
+  " autocmd FileType ruby,eruby setlocal iskeyword+=?
 
-  autocmd! BufReadPost,BufWritePost * Neomake
-  autocmd ColorScheme * hi link NeomakeWarning SpellBad
+  " Autoclose invoker reload split
+  autocmd TermClose term://*:ir q
 augroup END
 
 runtime macros/matchit.vim
 nnoremap <F5> :GundoToggle<CR>
 noremap <C-s> <esc>:w<cr>
 vmap <Enter> <Plug>(EasyAlign)
-" quick access buffer stuff
-nnoremap gn :bn<cr>
-nnoremap gp :bp<cr>
-nnoremap gd :Bdelete<cr>
-nnoremap gs :CtrlPBuffer<cr>
 
 let mapleader = ' '
 nnoremap <leader>y :CtrlPBuffer<cr>
@@ -129,6 +131,7 @@ nnoremap <leader>gp :Gpush<cr>
 nnoremap <leader>gc :Gcommit -v<cr>
 nnoremap <leader>gc :Gcommit -v<cr>
 nnoremap <leader>gq :silent! !git add -A<cr>:Gcommit -v<cr>
+nnoremap <leader>gb :Gblame<cr>
 
 " System clipboard mappings
 vmap <Leader>y "+y
@@ -157,18 +160,21 @@ vnoremap ; :
 vnoremap : ;
 
 " bind K to grep word under cursor
-nnoremap K :grep! "\b<C-R><C-W>\b"<CR>:cw<CR>
+nnoremap K :Ack! "\b<C-R><C-W>\b"<CR>:cw<CR>
 
+" Shortcut for restarting invoker server
+command IR split | terminal ir
 
+" Ask which tag to jump to when there is more than one match
+" nnoremap <C-]> g<C-]>
+
+set cursorline
 set background=dark
-colorscheme solarized
-let g:syntastic_always_populate_loc_list = 1
-let g:syntastic_ruby_checkers=['mri', 'rubocop']
-let g:syntastic_slim_checkers=['slimrb', 'slim_lint']
-let g:syntastic_javascript_checkers=['eslint']
-let g:syntastic_typescript_tsc_fname = ''
-" let g:syntastic_check_on_open = 1
-let g:syntastic_check_on_wq = 0
+set termguicolors
+let g:solarized_term_italics=1
+
+" colorscheme solarized8_dark
+colorscheme gruvbox
 
 let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
 
@@ -178,7 +184,6 @@ let g:ycm_collect_identifiers_from_tags_files = 1
 let g:ycm_seed_identifiers_with_syntax = 1
 let g:ycm_server_python_interpreter='/usr/bin/python'
 let g:rubycomplete_rails = 1
-let g:ycm_rust_src_path='/home/jon/.rust-src'
 
 nnoremap <leader>gf :YcmCompleter GoTo<CR>
 
@@ -188,6 +193,14 @@ let g:UltiSnipsJumpBackwardTrigger="<S-Tab>"
 
 let g:splitjoin_ruby_curly_braces=0
 let g:splitjoin_ruby_hanging_args=0
+
+let g:localvimrc_persistent=1
+
+let g:ale_sign_column_always = 1
+let g:airline#extensions#ale#enabled = 1
+let g:ale_linters = {
+\   'php': ['hack', 'langserver', 'php', 'phpmd', 'phpstan']
+\}
 
 syntax on
 filetype on

@@ -1,5 +1,4 @@
 # Git shortcuts
-alias g='git'
 alias ga='git add'
 alias gps='git push'
 unalias gp
@@ -20,6 +19,12 @@ alias gra='git remote add'
 alias grr='git remote rm'
 alias gcl='git clone'
 alias gfom='git fetch origin master:master'
+alias gci='git commit -v'
+alias gcd='git checkout develop'
+alias gpb='git publish'
+alias gflpb='git flow publish'
+alias gmg='git merge'
+
 alias py='python'
 alias mm=middleman
 
@@ -29,8 +34,20 @@ alias vim=nvim
 alias vims='vim -S Session.vim'
 
 alias ya=yaourt
-alias gci='git commit -v'
-alias gcd='git checkout develop'
+
 alias dc=docker-compose
-alias gpb='git publish'
 alias rl='less +G log/development.log'
+alias buc='bundle update --conservative'
+alias j=z
+alias open=open_command
+
+# bundler aliases
+# These come from the OMZ bundler plugin
+alias be="bundle exec"
+alias bl="bundle list"
+alias bp="bundle package"
+alias bo="bundle open"
+alias bout="bundle outdated"
+alias bu="bundle update"
+alias bi="bundle install"
+alias bcn="bundle clean"

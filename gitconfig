@@ -1,5 +1,5 @@
 [user]
-	email = jon@padorpers.com
+	email = jon@jonmast.com
 	name = Jonathan Mast
 [push]
 	default = simple
@@ -9,14 +9,20 @@
 	unstage = reset HEAD --
   ctags = "!sh -c '[ -f .git/hooks/ctags ] || git init; .git/hooks/ctags' git-ctags"
   publish = push -u origin HEAD
+  reup = reset --hard @{upstream}
 [blame]
 	date = relative
 [init]
 	templatedir = /home/jon/.git_template
 [merge]
-  ff = only
-	tool = vimdiff
+	tool = nvim -d
 [mergetool]
 	keepBackup = false
 [mergetool "fugitive"]
-	cmd = vim -f -c \"Gdiff\" \"$MERGED\"
+	cmd = nvim -f -c \"Gdiff\" \"$MERGED\"
+[diff]
+	wsErrorHighlight = all
+[log]
+	date = local
+[diff "image"]
+	command = git-imgdiff

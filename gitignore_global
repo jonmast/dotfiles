@@ -4,6 +4,7 @@
 *.un~
 Session.vim
 .netrwhist
+.lvimrc
 
 # RubyMine
 .idea/
@@ -30,3 +31,8 @@ zeus.json
 #lockfile
 *.lck
 *.pid
+
+vendor/cache/libv8-*-linux.gem
+.gemlocal
+.buildpath
+.project

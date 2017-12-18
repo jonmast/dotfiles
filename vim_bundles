@@ -6,16 +6,18 @@ endif
 
 filetype off
 
-call plug#begin()
-Plug 'neomake/neomake'
+call plug#begin('~/.config/nvim/plugged')
+Plug 'w0rp/ale'
 Plug 'tpope/vim-obsession'
 Plug 'tpope/vim-rails'
-Plug 'tpope/vim-endwise', {'for': 'ruby'}
+Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-abolish'
 Plug 'tpope/vim-surround'
 Plug 'tpope/vim-bundler'
 Plug 'tpope/vim-fugitive'
+Plug 'tommcdo/vim-fugitive-blame-ext'
+Plug 'tpope/vim-rhubarb'
 Plug 'tpope/vim-dispatch'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-projectionist'
@@ -29,7 +31,8 @@ Plug 'ctrlpvim/ctrlp.vim'
 Plug 'FelikZ/ctrlp-py-matcher'
 Plug 'iurifq/ctrlp-rails.vim'
 Plug 'tomtom/tcomment_vim'
-Plug 'jwhitley/vim-colors-solarized'
+Plug 'morhetz/gruvbox'
+Plug 'lifepillar/vim-solarized8'
 Plug 'airblade/vim-gitgutter'
 Plug 'kchmck/vim-coffee-script'
 Plug 'christoomey/vim-tmux-navigator'
@@ -42,11 +45,13 @@ Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
 Plug 'bkad/CamelCaseMotion'
 Plug 'mattn/emmet-vim'
 Plug 'sheerun/vim-polyglot'
+Plug 'slime-lang/vim-slime-syntax'
 Plug 'AndrewRadev/splitjoin.vim'
 Plug 'ecomba/vim-ruby-refactoring'
 Plug 'avdgaag/vim-phoenix'
-Plug 'dbext.vim'
-Plug 'KabbAmine/zeavim.vim'
 Plug 'editorconfig/editorconfig-vim'
+Plug 'embear/vim-localvimrc'
+Plug 'mileszs/ack.vim'
+Plug 'alcesleo/vim-uppercase-sql'
 call plug#end()
 filetype on
