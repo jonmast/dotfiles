@@ -36,3 +36,4 @@ vendor/cache/libv8-*-linux.gem
 .gemlocal
 .buildpath
 .project
+.sass-lint.yml

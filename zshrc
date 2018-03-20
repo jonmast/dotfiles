@@ -1,5 +1,5 @@
 source ~/perl5/perlbrew/etc/bashrc
-export PATH=.git/safe/../../bin:$HOME/.rbenv/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin:$HOME/.local/bin:./bin
+export PATH=$HOME/.rbenv/bin:$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin:./bin
 eval "$(rbenv init -)"
 export PATH=.git/safe/../../bin:$PATH
 
@@ -52,6 +52,14 @@ fbr() {
            fzf-tmux -d $(( 2 + $(wc -l <<< "$branches") )) +m) &&
   git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
 }
+
+# Like fbr, but only for local feature branches
+ffbr() {
+  local branch
+  branch=$(git flow feature | fzf-tmux +m) &&
+    git flow feature checkout $(echo $branch | sed "s/.* //")
+}
+
 
 unalias g
 function g {

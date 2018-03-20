@@ -19,6 +19,7 @@ alias gra='git remote add'
 alias grr='git remote rm'
 alias gcl='git clone'
 alias gfom='git fetch origin master:master'
+alias gfod='git fetch origin develop:develop'
 alias gci='git commit -v'
 alias gcd='git checkout develop'
 alias gpb='git publish'
@@ -51,3 +52,5 @@ alias bout="bundle outdated"
 alias bu="bundle update"
 alias bi="bundle install"
 alias bcn="bundle clean"
+
+alias rg="/usr/bin/rg --type-add='haml:*.haml'"

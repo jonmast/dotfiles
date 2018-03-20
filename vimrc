@@ -146,9 +146,6 @@ nnoremap <Leader>s :TestNearest<CR>
 nnoremap <Leader>l :TestLast<CR>
 nnoremap <Leader>a :TestSuite<CR>
 
-" Default to rspec on initial startup
-let g:test#last_command = 'rspec'
-let g:test#last_position = { 'file': 'test_spec.rb' }
 let test#strategy = 'dispatch'
 
 call camelcasemotion#CreateMotionMappings(',')
@@ -201,6 +198,10 @@ let g:airline#extensions#ale#enabled = 1
 let g:ale_linters = {
 \   'php': ['hack', 'langserver', 'php', 'phpmd', 'phpstan']
 \}
+
+" Auto-format rust code after save
+let g:rustfmt_autosave = 1
+let g:rustfmt_fail_silently = 1 " Don't display errors, ALE handles that
 
 syntax on
 filetype on
