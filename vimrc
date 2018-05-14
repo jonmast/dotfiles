@@ -60,10 +60,11 @@ if has("gui_running")
   set lines=999 columns=999
 endif
 
-" The Silver Searcher
-if executable('ag')
+" RipGrep
+if executable('rg')
   " Use ag over grep
-  set grepprg=ag\ --nogroup\ --nocolor
+  set grepprg=rg\ --vimgrep\ --no-heading
+  set grepformat=%f:%l:%c:%m,%f:%l:%m
 
   " Use ag in CtrlP for listing files. Lightning fast and respects .gitignore
   let g:ctrlp_user_command = '/usr/bin/rg --color=never --files %s'
@@ -72,7 +73,7 @@ if executable('ag')
   let g:ctrlp_use_caching = 0
 
   " Ack.vim adds some niceties for searching
-  let g:ackprg = 'ag --vimgrep'
+  let g:ackprg = 'rg --vimgrep --no-heading'
 endif
 
 if filereadable(expand('~/.vim_bundles'))
