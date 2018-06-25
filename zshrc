@@ -6,6 +6,9 @@ export PATH=.git/safe/../../bin:$PATH
 export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
 export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
 
+autoload -Uz compinit && compinit
+compdef g=git
+
 # Load antigen
 source ~/.dotfiles/antigen/antigen.zsh
 DEFAULT_USER="jon"
@@ -70,8 +73,6 @@ function g {
     git status --short --branch
   fi
 }
-
-compdef g=git
 
 function time_since_last_commit() {
   ref=$(git symbolic-ref HEAD 2> /dev/null) || return
