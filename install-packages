@@ -1,0 +1,20 @@
+#!/bin/bash
+
+cd
+
+# Install packages
+sudo pacman -Syu --noconfirm
+sudo pacman -S base-devel zsh neovim git --noconfirm --needed
+
+# Zsh > Bash
+sudo chsh jon -s /usr/bin/zsh
+
+# Install aurman
+git clone https://aur.archlinux.org/aurman.git
+cd aurman
+makepkg -si --noconfirm
+cd
+
+aurman -S rcm --noconfirm --noedit
+
+rcup
