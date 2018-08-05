@@ -80,7 +80,9 @@ function time_since_last_commit() {
 
 fasd_cache="$ZSH_CACHE_DIR/.fasd-init-cache"
 if type fasd &> /dev/null; then
-  [[ ! -a $fasd_cache ]] || fasd --init auto >| "$fasd_cache"
+  [[ -a $fasd_cache ]] || fasd --init posix-alias \
+    zsh-hook zsh-ccomp zsh-ccomp-install zsh-wcomp zsh-wcomp-install \
+    >| "$fasd_cache"
 
   source $fasd_cache
 fi
