@@ -1,6 +1,5 @@
-source ~/perl5/perlbrew/etc/bashrc
 export PATH=$HOME/.rbenv/bin:$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin:./bin
-eval "$(rbenv init -)"
+type rbenv &> /dev/null && eval "$(rbenv init -)"
 export PATH=.git/safe/../../bin:$PATH
 
 export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
@@ -45,7 +44,7 @@ export EDITOR=nvim
 # export TERM="xterm-256color"
 alias tmux="env TERM=xterm-256color tmux" #hopefully fix strange vim+tmux issues
 
-source /usr/share/fzf/key-bindings.zsh
+[[ -a /usr/share/fzf/key-bindings.zsh ]] && source /usr/share/fzf/key-bindings.zsh
 
 # fbr - checkout git branch (including remote branches)
 fbr() {
@@ -79,7 +78,13 @@ function time_since_last_commit() {
   git log -1 --pretty=format:"%ar" | sed 's/\([0-9]*\) \(.\).*/\1\2/'
 }
 
-source ${ZSH_CACHE_DIR}/fasd-init-cache
+fasd_cache="$ZSH_CACHE_DIR/.fasd-init-cache"
+if type fasd &> /dev/null; then
+  [[ ! -a $fasd_cache ]] || fasd --init auto >| "$fasd_cache"
+
+  source $fasd_cache
+fi
+unset fasd_cache
 
 # Keybindings for history serarch
 bindkey '^[[A' history-substring-search-up
