@@ -2,4 +2,4 @@
 cd ~/.dotfiles
 git submodule init
 git submodule update
-vim  +PlugInstall +qa
+nvim  +PlugInstall +qa
