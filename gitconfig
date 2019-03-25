@@ -1,10 +1,12 @@
 [user]
 	email = jon@jonmast.com
 	name = Jonathan Mast
+	signingkey = 61BD854CBFF15EE6
 [push]
 	default = simple
 [core]
 	excludesfile = ~/.gitignore_global
+	pager = diff-so-fancy | less --tabs=4 -RFX
 [alias]
 	unstage = reset HEAD --
   ctags = "!sh -c '[ -f .git/hooks/ctags ] || git init; .git/hooks/ctags' git-ctags"
@@ -15,7 +17,7 @@
 [init]
 	templatedir = /home/jon/.git_template
 [merge]
-	tool = nvim -d
+	tool = fugitive
 [mergetool]
 	keepBackup = false
 [mergetool "fugitive"]
@@ -26,3 +28,10 @@
 	date = local
 [diff "image"]
 	command = git-imgdiff
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[commit]
+	gpgsign = true

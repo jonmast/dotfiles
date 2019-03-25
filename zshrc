@@ -1,12 +1,16 @@
-export PATH=$HOME/.rbenv/bin:$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin:./bin
+export PATH=$HOME/.rbenv/bin:$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin
 type rbenv &> /dev/null && eval "$(rbenv init -)"
 export PATH=.git/safe/../../bin:$PATH
+
+[[ -a $HOME/.asdf/asdf.sh ]] && source $HOME/.asdf/asdf.sh
+[[ -a $HOME/.asdf/completions/asdf.bash ]] && source $HOME/.asdf/completions/asdf.bash
 
 export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
 export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
 
 autoload -Uz compinit && compinit
 compdef g=git
+compdef mycli=mysql
 
 # Load antigen
 source ~/.dotfiles/antigen/antigen.zsh

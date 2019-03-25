@@ -37,3 +37,5 @@ vendor/cache/libv8-*-linux.gem
 .buildpath
 .project
 .sass-lint.yml
+.vscode
+.solargraph.yml

@@ -1,12 +1,12 @@
 # Git shortcuts
 alias ga='git add'
 alias gps='git push'
-unalias gp
 alias gpl='git pull'
 alias gl='git log'
 alias gg='gl --decorate --oneline --graph --date-order --all'
 alias gs='git status -sb'
 alias gst='git status'
+alias gsta='git stash push'
 alias gd='git diff'
 alias gdc='gd --cached'
 alias gm='git commit -m'
@@ -22,9 +22,11 @@ alias gfom='git fetch origin master:master'
 alias gfod='git fetch origin develop:develop'
 alias gci='git commit -v'
 alias gcd='git checkout develop'
+alias gcdp='git checkout deploy'
 alias gpb='git publish'
 alias gflpb='git flow publish'
 alias gmg='git merge'
+alias gmg-='git merge -'
 
 alias py='python'
 alias mm=middleman
@@ -43,7 +45,7 @@ alias j=z
 alias open=open_command
 
 # bundler aliases
-# These come from the OMZ bundler plugin
+# These are extracted from the OMZ bundler plugin
 alias be="bundle exec"
 alias bl="bundle list"
 alias bp="bundle package"
@@ -53,4 +55,9 @@ alias bu="bundle update"
 alias bi="bundle install"
 alias bcn="bundle clean"
 
-alias rg="/usr/bin/rg --type-add='haml:*.haml'"
+alias bir="bundle && ir"
+alias ls="exa"
+
+alias rg="/usr/bin/rg --max-columns=1000 --smart-case --type-add='haml:*.haml' --type-add='coffee:*.coffee'"
+
+alias sgrep="bundle show --paths | rg sellect | xargs rg"
