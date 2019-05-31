@@ -15,7 +15,7 @@
 [blame]
 	date = relative
 [init]
-	templatedir = /home/jon/.git_template
+	templatedir = ~/.git_template
 [merge]
 	tool = fugitive
 [mergetool]

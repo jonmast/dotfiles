@@ -2,13 +2,13 @@ export PATH=$HOME/.rbenv/bin:$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo
 type rbenv &> /dev/null && eval "$(rbenv init -)"
 export PATH=.git/safe/../../bin:$PATH
 
+autoload -Uz compinit && compinit
 [[ -a $HOME/.asdf/asdf.sh ]] && source $HOME/.asdf/asdf.sh
 [[ -a $HOME/.asdf/completions/asdf.bash ]] && source $HOME/.asdf/completions/asdf.bash
 
 export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
 export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
 
-autoload -Uz compinit && compinit
 compdef g=git
 compdef mycli=mysql
 
@@ -40,15 +40,28 @@ SAVEHIST=1000000
 unsetopt nomatch
 stty -ixon
 source $HOME/.aliases
+
 #set my custom ls colors
-eval $( dircolors -b $HOME/.LS_COLORS )
-# Customize to your needs...
+if [[ -a ~/.LS_COLORS ]]; then
+  if type dircolors &> /dev/null; then
+    eval $( dircolors -b $HOME/.LS_COLORS )
+  else
+    # Apple hates GNU, so they call it gdircolors
+    if type gdircolors &> /dev/null; then
+      eval $( gdircolors -b $HOME/.LS_COLORS )
+    fi
+  fi
+fi
+
 export EDITOR=nvim
 
 # export TERM="xterm-256color"
 alias tmux="env TERM=xterm-256color tmux" #hopefully fix strange vim+tmux issues
 
+# Linux path
 [[ -a /usr/share/fzf/key-bindings.zsh ]] && source /usr/share/fzf/key-bindings.zsh
+# OSX
+[[ -a  "/usr/local/opt/fzf/shell/key-bindings.zsh" ]] && source "/usr/local/opt/fzf/shell/key-bindings.zsh"
 
 # fbr - checkout git branch (including remote branches)
 fbr() {

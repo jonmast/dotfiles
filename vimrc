@@ -67,7 +67,7 @@ if executable('rg')
   set grepformat=%f:%l:%c:%m,%f:%l:%m
 
   " Use ag in CtrlP for listing files. Lightning fast and respects .gitignore
-  let g:ctrlp_user_command = '/usr/bin/rg --color=never --files %s'
+  let g:ctrlp_user_command = 'rg --color=never --files %s'
 
   " ag is fast enough that CtrlP doesn't need to cache
   let g:ctrlp_use_caching = 0
@@ -161,7 +161,7 @@ vnoremap : ;
 nnoremap K :Ack! "\b<C-R><C-W>\b"<CR>:cw<CR>
 
 " Shortcut for restarting invoker server
-command IR split | terminal ir
+command! IR split | terminal ir
 
 " Ask which tag to jump to when there is more than one match
 " nnoremap <C-]> g<C-]>

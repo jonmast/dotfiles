@@ -58,6 +58,6 @@ alias bcn="bundle clean"
 alias bir="bundle && ir"
 alias ls="exa"
 
-alias rg="/usr/bin/rg --max-columns=1000 --smart-case --type-add='haml:*.haml' --type-add='coffee:*.coffee'"
+alias rg="rg --max-columns=1000 --smart-case --type-add='haml:*.haml' --type-add='coffee:*.coffee'"
 
 alias sgrep="bundle show --paths | rg sellect | xargs rg"
