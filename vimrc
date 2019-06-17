@@ -79,6 +79,20 @@ endif
 if filereadable(expand('~/.vim_bundles'))
   source ~/.vim_bundles
 endif
+let g:LanguageClient_loggingFile = expand('~/.vim/LanguageClient.log')
+let g:LanguageClient_serverCommands = {
+      \ 'scss': [ 'css-languageserver', '--stdio' ],
+      \ 'ruby': [ 'solargraph',  'stdio' ],
+\ }
+
+inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
+inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+" enter inserts newline when completion window is open
+" Extra config here to resolve conflict with endwise
+let g:endwise_no_mappings = 1
+imap <C-X><CR>   <CR><Plug>AlwaysEnd
+imap <expr> <CR> (pumvisible() ? "\<C-Y>\<CR>\<Plug>DiscretionaryEnd" : "\<CR>\<Plug>DiscretionaryEnd")
+nnoremap <silent> gh :call LanguageClient#textDocument_hover()<CR>
 
 augroup vimrcEx
   autocmd!
@@ -107,6 +121,13 @@ augroup vimrcEx
 
   " Autoclose invoker reload split
   autocmd TermClose term://*:ir q
+
+  " enable ncm2 for all buffers
+  autocmd BufEnter * call ncm2#enable_for_buffer()
+
+  " IMPORTANT: :help Ncm2PopupOpen for more information
+  au User Ncm2PopupOpen set completeopt=noinsert,menuone,noselect
+  au User Ncm2PopupClose set completeopt=menuone
 augroup END
 
 runtime macros/matchit.vim
@@ -176,18 +197,12 @@ colorscheme gruvbox
 
 let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
 
-let g:ycm_key_list_select_completion=['<C-n>', '<Down>']
-let g:ycm_key_list_previous_completion=['<C-p>', '<Up>']
-let g:ycm_collect_identifiers_from_tags_files = 1
-let g:ycm_seed_identifiers_with_syntax = 1
-let g:ycm_server_python_interpreter='/usr/bin/python'
-let g:rubycomplete_rails = 1
 
-nnoremap <leader>gf :YcmCompleter GoTo<CR>
-
-let g:UltiSnipsExpandTrigger="<Tab>"
-let g:UltiSnipsJumpForwardTrigger="<Tab>"
-let g:UltiSnipsJumpBackwardTrigger="<S-Tab>"
+" Expand snippet on enter
+inoremap <silent> <expr> <CR> ncm2_ultisnips#expand_or("\<CR>", 'n')
+let g:UltiSnipsJumpForwardTrigger	= "<c-j>"
+let g:UltiSnipsJumpBackwardTrigger	= "<c-k>"
+let g:UltiSnipsRemoveSelectModeMappings = 0
 
 let g:splitjoin_ruby_curly_braces=0
 let g:splitjoin_ruby_hanging_args=0

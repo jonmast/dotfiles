@@ -24,7 +24,6 @@ Plug 'tpope/vim-projectionist'
 " This slows down md files drastically, https://github.com/tpope/vim-sleuth/issues/43
 " Plug 'tpope/vim-sleuth'
 Plug 'tpope/vim-unimpaired'
-Plug 'Valloric/YouCompleteMe'
 Plug 'junegunn/vim-easy-align'
 Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
@@ -42,7 +41,6 @@ Plug 'janko-m/vim-test'
 Plug 'moll/vim-bbye'
 Plug 'nelstrom/vim-textobj-rubyblock', {'for': 'ruby'} | Plug 'kana/vim-textobj-user'
 Plug 'kana/vim-textobj-indent'
-Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
 Plug 'bkad/CamelCaseMotion'
 Plug 'mattn/emmet-vim'
 Plug 'sheerun/vim-polyglot'
@@ -54,5 +52,16 @@ Plug 'editorconfig/editorconfig-vim'
 Plug 'embear/vim-localvimrc'
 Plug 'mileszs/ack.vim'
 Plug 'alcesleo/vim-uppercase-sql'
+Plug 'nathanaelkane/vim-indent-guides'
+Plug 'autozimu/LanguageClient-neovim', {
+    \ 'branch': 'next',
+    \ 'do': 'bash install.sh',
+\ }
+Plug 'ncm2/ncm2'
+Plug 'roxma/nvim-yarp'
+Plug 'ncm2/ncm2-bufword'
+Plug 'ncm2/ncm2-path'
+Plug 'ncm2/ncm2-tagprefix'
+Plug 'ncm2/ncm2-ultisnips' | Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
 call plug#end()
 filetype on

@@ -55,6 +55,9 @@ alias bu="bundle update"
 alias bi="bundle install"
 alias bcn="bundle clean"
 
+alias oc='oxidux connect'
+alias or='oxidux restart'
+
 alias bir="bundle && ir"
 alias ls="exa"
 
