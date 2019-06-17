@@ -50,8 +50,9 @@ Plug 'ecomba/vim-ruby-refactoring'
 Plug 'avdgaag/vim-phoenix'
 Plug 'editorconfig/editorconfig-vim'
 Plug 'embear/vim-localvimrc'
+Plug 'mhinz/vim-grepper'
+Plug 'JulesWang/css.vim'
 Plug 'mileszs/ack.vim'
-Plug 'alcesleo/vim-uppercase-sql'
 Plug 'nathanaelkane/vim-indent-guides'
 Plug 'autozimu/LanguageClient-neovim', {
     \ 'branch': 'next',

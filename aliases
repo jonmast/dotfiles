@@ -63,4 +63,10 @@ alias ls="exa"
 
 alias rg="rg --max-columns=1000 --smart-case --type-add='haml:*.haml' --type-add='coffee:*.coffee'"
 
+alias or='oxidux restart'
+alias oc='oxidux connect'
+alias bor='bundle && oxidux restart'
+
 alias sgrep="bundle show --paths | rg sellect | xargs rg"
+
+alias JSC="JS_DRIVER=chrome"

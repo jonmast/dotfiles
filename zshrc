@@ -1,13 +1,13 @@
-export PATH=$HOME/.rbenv/bin:$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin
-type rbenv &> /dev/null && eval "$(rbenv init -)"
-export PATH=.git/safe/../../bin:$PATH
+export PATH=$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin
+
+export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
+export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
 
 autoload -Uz compinit && compinit
 [[ -a $HOME/.asdf/asdf.sh ]] && source $HOME/.asdf/asdf.sh
 [[ -a $HOME/.asdf/completions/asdf.bash ]] && source $HOME/.asdf/completions/asdf.bash
 
-export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
-export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
+export PATH=.git/safe/../../bin:$PATH
 
 compdef g=git
 compdef mycli=mysql

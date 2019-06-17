@@ -42,7 +42,7 @@ set autoread
 set viminfo^=!
 set display+=lastline
 set list
-set listchars=tab:>\ ,trail:-,extends:>,precedes:<,nbsp:+
+set listchars=tab:>\ ,trail:·,extends:>,precedes:<,nbsp:+
 
 set inccommand=nosplit
 
@@ -67,7 +67,7 @@ if executable('rg')
   set grepformat=%f:%l:%c:%m,%f:%l:%m
 
   " Use ag in CtrlP for listing files. Lightning fast and respects .gitignore
-  let g:ctrlp_user_command = 'rg --color=never --files %s'
+  let g:ctrlp_user_command = 'rg --color=never -g"!vendor/cache/*" --files %s'
 
   " ag is fast enough that CtrlP doesn't need to cache
   let g:ctrlp_use_caching = 0
@@ -128,6 +128,10 @@ augroup vimrcEx
   " IMPORTANT: :help Ncm2PopupOpen for more information
   au User Ncm2PopupOpen set completeopt=noinsert,menuone,noselect
   au User Ncm2PopupClose set completeopt=menuone
+
+  autocmd FileType go setlocal nolist
+
+  autocmd BufReadPost quickfix map <buffer> <MiddleMouse> gx
 augroup END
 
 runtime macros/matchit.vim
@@ -169,6 +173,11 @@ nnoremap <Leader>l :TestLast<CR>
 nnoremap <Leader>a :TestSuite<CR>
 
 let test#strategy = 'dispatch'
+" Don't try to guess test file
+let g:test#no_alternate = 1
+let test#ruby#cucumber#executable='bin/spinach'
+
+let g:dispatch_compilers = { 'bin/spinach': 'cucumber' }
 
 call camelcasemotion#CreateMotionMappings(',')
 
@@ -183,6 +192,9 @@ nnoremap K :Ack! "\b<C-R><C-W>\b"<CR>:cw<CR>
 
 " Shortcut for restarting invoker server
 command! IR split | terminal ir
+
+" Open corresponding file in SF and diff it
+command! SFdiff vs ../sellect_frontend/% | windo diffthis
 
 " Ask which tag to jump to when there is more than one match
 " nnoremap <C-]> g<C-]>
