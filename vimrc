@@ -79,10 +79,14 @@ endif
 if filereadable(expand('~/.vim_bundles'))
   source ~/.vim_bundles
 endif
+
+set shortmess+=c
+
 let g:LanguageClient_loggingFile = expand('~/.vim/LanguageClient.log')
 let g:LanguageClient_serverCommands = {
       \ 'scss': [ 'css-languageserver', '--stdio' ],
       \ 'ruby': [ 'solargraph',  'stdio' ],
+      \ 'rust': [ 'rls' ],
 \ }
 
 inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
@@ -212,8 +216,9 @@ let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
 
 " Expand snippet on enter
 inoremap <silent> <expr> <CR> ncm2_ultisnips#expand_or("\<CR>", 'n')
-let g:UltiSnipsJumpForwardTrigger	= "<c-j>"
-let g:UltiSnipsJumpBackwardTrigger	= "<c-k>"
+let g:UltiSnipsExpandTrigger = "<Plug>(ultisnips_expand)"
+let g:UltiSnipsJumpForwardTrigger = "<c-j>"
+let g:UltiSnipsJumpBackwardTrigger = "<c-k>"
 let g:UltiSnipsRemoveSelectModeMappings = 0
 
 let g:splitjoin_ruby_curly_braces=0
