@@ -31,7 +31,7 @@ set sidescroll=1
 set history=2000        " Number of things to remember in history.
 set ttimeout
 set ttimeoutlen=10     " Time to wait after ESC (default causes an annoying delay)
-set completeopt=longest,menuone
+set completeopt=menuone
 
 set splitbelow
 set splitright
@@ -82,21 +82,28 @@ endif
 
 set shortmess+=c
 
-let g:LanguageClient_loggingFile = expand('~/.vim/LanguageClient.log')
-let g:LanguageClient_serverCommands = {
-      \ 'scss': [ 'css-languageserver', '--stdio' ],
-      \ 'ruby': [ 'solargraph',  'stdio' ],
-      \ 'rust': [ 'rls' ],
-\ }
+inoremap <silent><expr> <TAB>
+      \ pumvisible() ? "\<C-n>" :
+      \ <SID>check_back_space() ? "\<TAB>" :
+      \ coc#refresh()
+inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
 
-inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
-inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-" enter inserts newline when completion window is open
-" Extra config here to resolve conflict with endwise
-let g:endwise_no_mappings = 1
-imap <C-X><CR>   <CR><Plug>AlwaysEnd
-imap <expr> <CR> (pumvisible() ? "\<C-Y>\<CR>\<Plug>DiscretionaryEnd" : "\<CR>\<Plug>DiscretionaryEnd")
-nnoremap <silent> gh :call LanguageClient#textDocument_hover()<CR>
+function! s:check_back_space() abort
+  let col = col('.') - 1
+  return !col || getline('.')[col - 1]  =~# '\s'
+endfunction
+
+nnoremap <silent> gh :call CocAction('doHover')<CR>
+inoremap <silent><expr> <c-space> coc#refresh()
+
+let g:lexima_enable_basic_rules = 0
+
+inoremap <expr> <Plug>LeximaCR lexima#expand('<LT>CR>', 'i')
+
+let g:UltiSnipsExpandTrigger = "<c-u>"
+let g:UltiSnipsJumpForwardTrigger = "<c-j>"
+let g:UltiSnipsJumpBackwardTrigger = "<c-k>"
+let g:UltiSnipsRemoveSelectModeMappings = 0
 
 augroup vimrcEx
   autocmd!
@@ -125,13 +132,6 @@ augroup vimrcEx
 
   " Autoclose invoker reload split
   autocmd TermClose term://*:ir q
-
-  " enable ncm2 for all buffers
-  autocmd BufEnter * call ncm2#enable_for_buffer()
-
-  " IMPORTANT: :help Ncm2PopupOpen for more information
-  au User Ncm2PopupOpen set completeopt=noinsert,menuone,noselect
-  au User Ncm2PopupClose set completeopt=menuone
 
   autocmd FileType go setlocal nolist
 
@@ -195,10 +195,12 @@ vnoremap : ;
 nnoremap K :Ack! "\b<C-R><C-W>\b"<CR>:cw<CR>
 
 " Shortcut for restarting invoker server
-command! IR split | terminal ir
+command! OR split | terminal oxidux restart
 
 " Open corresponding file in SF and diff it
 command! SFdiff vs ../sellect_frontend/% | windo diffthis
+
+command! MN tabe my-notes.md
 
 " Ask which tag to jump to when there is more than one match
 " nnoremap <C-]> g<C-]>
@@ -212,14 +214,6 @@ let g:solarized_term_italics=1
 colorscheme gruvbox
 
 let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
-
-
-" Expand snippet on enter
-inoremap <silent> <expr> <CR> ncm2_ultisnips#expand_or("\<CR>", 'n')
-let g:UltiSnipsExpandTrigger = "<Plug>(ultisnips_expand)"
-let g:UltiSnipsJumpForwardTrigger = "<c-j>"
-let g:UltiSnipsJumpBackwardTrigger = "<c-k>"
-let g:UltiSnipsRemoveSelectModeMappings = 0
 
 let g:splitjoin_ruby_curly_braces=0
 let g:splitjoin_ruby_hanging_args=0
@@ -235,6 +229,9 @@ let g:ale_linters = {
 " Auto-format rust code after save
 let g:rustfmt_autosave = 1
 let g:rustfmt_fail_silently = 1 " Don't display errors, ALE handles that
+
+" Use 2 spaces instead of 4 for indenting multiline list items
+let g:vim_markdown_new_list_item_indent = 2
 
 syntax on
 filetype on

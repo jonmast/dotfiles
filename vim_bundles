@@ -10,7 +10,6 @@ call plug#begin('~/.config/nvim/plugged')
 Plug 'w0rp/ale'
 Plug 'tpope/vim-obsession'
 Plug 'tpope/vim-rails'
-Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-abolish'
 Plug 'tpope/vim-surround'
@@ -54,15 +53,8 @@ Plug 'mhinz/vim-grepper'
 Plug 'JulesWang/css.vim'
 Plug 'mileszs/ack.vim'
 Plug 'nathanaelkane/vim-indent-guides'
-Plug 'autozimu/LanguageClient-neovim', {
-    \ 'branch': 'next',
-    \ 'do': 'bash install.sh',
-\ }
-Plug 'ncm2/ncm2'
-Plug 'roxma/nvim-yarp'
-Plug 'ncm2/ncm2-bufword'
-Plug 'ncm2/ncm2-path'
-Plug 'ncm2/ncm2-tagprefix'
-Plug 'ncm2/ncm2-ultisnips' | Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
+Plug 'cohama/lexima.vim'
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
 call plug#end()
 filetype on
