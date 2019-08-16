@@ -9,6 +9,9 @@ Session.vim
 # RubyMine
 .idea/
 
+# Libreoffice
+.~lock*#
+
 *~
 .directory
 #ctags stuff
@@ -39,3 +42,4 @@ vendor/cache/libv8-*-linux.gem
 .sass-lint.yml
 .vscode
 .solargraph.yml
+my-notes.md
