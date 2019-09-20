@@ -1,0 +1,13 @@
+#!/usr/bin/env zsh
+
+typeset -A merge_bases
+
+git for-each-ref --format '%(refname:short)' refs/heads | grep -E '(develop|\-stable)$' | while read -r branch; do
+  key=$(git merge-base HEAD $branch)
+  # merge-base can sometimes return nothing, only add if it exists
+  [[ -z "$key" ]] || merge_bases[$key]=$branch
+done
+
+rev=$(git rev-list HEAD | grep -f <(echo ${(kF)merge_bases}) | head -n1)
+
+echo "${merge_bases[$rev]}"
