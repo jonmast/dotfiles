@@ -70,3 +70,4 @@ alias bor='bundle && oxidux restart'
 alias sgrep="bundle show --paths | rg sellect | xargs rg"
 
 alias JSC="JS_DRIVER=chrome"
+alias hop='hub open-pr'

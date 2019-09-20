@@ -39,6 +39,7 @@ SAVEHIST=1000000
 # This allows using parameters like HEAD^ without quoting
 unsetopt nomatch
 stty -ixon
+setopt correct
 source $HOME/.aliases
 
 #set my custom ls colors

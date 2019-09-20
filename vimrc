@@ -32,6 +32,7 @@ set history=2000        " Number of things to remember in history.
 set ttimeout
 set ttimeoutlen=10     " Time to wait after ESC (default causes an annoying delay)
 set completeopt=menuone
+set updatetime=300
 
 set splitbelow
 set splitright
@@ -43,6 +44,7 @@ set viminfo^=!
 set display+=lastline
 set list
 set listchars=tab:>\ ,trail:·,extends:>,precedes:<,nbsp:+
+set tags^=./.git/tags;
 
 set inccommand=nosplit
 
@@ -95,6 +97,22 @@ endfunction
 
 nnoremap <silent> gh :call CocAction('doHover')<CR>
 inoremap <silent><expr> <c-space> coc#refresh()
+
+let g:coc_global_extensions = [
+\  'coc-css',
+\  'coc-dictionary',
+\  'coc-json',
+\  'coc-rls',
+\  'coc-solargraph',
+\  'coc-syntax',
+\  'coc-tsserver',
+\  'coc-tslint-plugin',
+\  'coc-vetur',
+\  'coc-ultisnips',
+\  'coc-vimlsp',
+\  'coc-git',
+\  'coc-python',
+\]
 
 let g:lexima_enable_basic_rules = 0
 
@@ -223,7 +241,9 @@ let g:localvimrc_persistent=1
 let g:ale_sign_column_always = 1
 let g:airline#extensions#ale#enabled = 1
 let g:ale_linters = {
-\   'php': ['hack', 'langserver', 'php', 'phpmd', 'phpstan']
+\   'php': ['hack', 'langserver', 'php', 'phpmd', 'phpstan'],
+\   'javascript': ['standard'],
+\   'typescript': [],
 \}
 
 " Auto-format rust code after save

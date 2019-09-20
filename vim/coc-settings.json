@@ -1,0 +1,22 @@
+{
+    "languageserver": {
+        "intelephense": {
+            "command": "node",
+            "args": ["/home/jon/.yarn/bin/intelephense", "--stdio"],
+            "filetypes": ["php"]
+        }
+    },
+    "solargraph.commandPath": "/home/jon/.asdf/shims/solargraph",
+    "solargraph.diagnostics": true,
+    "suggest.enablePreview": true,
+    "coc.source.ultisnips.priority": 1,
+    "tsserver.formatOnType": true,
+    "tsserver.log": "verbose",
+    "diagnostic.displayByAle": true,
+    "tslint.autoFixOnSave": true,
+    "git.semanticCommit.filetypes": [
+      "gitcommit",
+      "markdown"
+    ],
+    "python.jediEnabled": false
+}
