@@ -10,10 +10,11 @@
     "solargraph.diagnostics": true,
     "suggest.enablePreview": true,
     "coc.source.ultisnips.priority": 1,
-    "tsserver.formatOnType": true,
+    "coc.preferences.formatOnSaveFiletypes": ["typescript"],
     "tsserver.log": "verbose",
-    "diagnostic.displayByAle": true,
+    // "diagnostic.displayByAle": true,
     "tslint.autoFixOnSave": true,
+    "tsserver.formatOnType": false,
     "git.semanticCommit.filetypes": [
       "gitcommit",
       "markdown"

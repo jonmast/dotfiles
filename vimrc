@@ -199,6 +199,10 @@ let test#strategy = 'dispatch'
 let g:test#no_alternate = 1
 let test#ruby#cucumber#executable='bin/spinach'
 
+" Typescript support
+let g:test#javascript#mocha#file_pattern = '\v.\.test\.(ts|js|tsx|jsx)$'
+let test#javascript#mocha#executable='npm test'
+
 let g:dispatch_compilers = { 'bin/spinach': 'cucumber' }
 
 call camelcasemotion#CreateMotionMappings(',')
