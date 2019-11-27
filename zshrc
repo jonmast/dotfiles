@@ -28,7 +28,6 @@ antigen bundle archlinux
 antigen bundle rails
 antigen bundle mix
 antigen bundle djui/alias-tips
-antigen theme blinks
 antigen apply
 
 setopt no_hist_verify
@@ -111,6 +110,10 @@ bindkey '^[[A' history-substring-search-up
 bindkey '^[[B' history-substring-search-down
 bindkey -M vicmd 'k' history-substring-search-up
 bindkey -M vicmd 'j' history-substring-search-down
+
+if type starship &> /dev/null; then
+  eval "$(starship init zsh)"
+fi
 
 # count potential duplicate migrations
 # for file in $(cat files); do f=$(echo $file | sed s/[^_]*_//); find db/migrate -name "*$f" | wc -l | xargs echo $file; done

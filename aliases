@@ -27,6 +27,7 @@ alias gpb='git publish'
 alias gflpb='git flow publish'
 alias gmg='git merge'
 alias gmg-='git merge -'
+alias gsw='git switch'
 
 alias py='python'
 alias mm=middleman

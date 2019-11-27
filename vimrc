@@ -102,7 +102,7 @@ let g:coc_global_extensions = [
 \  'coc-css',
 \  'coc-dictionary',
 \  'coc-json',
-\  'coc-rls',
+\  'coc-rust-analyzer',
 \  'coc-solargraph',
 \  'coc-syntax',
 \  'coc-tsserver',
@@ -112,6 +112,9 @@ let g:coc_global_extensions = [
 \  'coc-vimlsp',
 \  'coc-git',
 \  'coc-python',
+\  'coc-diagnostic',
+\  'coc-stylelint',
+\  'coc-eslint',
 \]
 
 let g:lexima_enable_basic_rules = 0
@@ -201,7 +204,7 @@ let test#ruby#cucumber#executable='bin/spinach'
 
 " Typescript support
 let g:test#javascript#mocha#file_pattern = '\v.\.test\.(ts|js|tsx|jsx)$'
-let test#javascript#mocha#executable='npm test'
+let test#javascript#mocha#executable='npm test -- '
 
 let g:dispatch_compilers = { 'bin/spinach': 'cucumber' }
 

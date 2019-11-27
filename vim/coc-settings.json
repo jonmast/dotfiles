@@ -4,20 +4,54 @@
             "command": "node",
             "args": ["/home/jon/.yarn/bin/intelephense", "--stdio"],
             "filetypes": ["php"]
+        },
+        "ccls": {
+            "command": "ccls",
+            "filetypes": ["c", "cpp", "objc", "objcpp"],
+            "rootPatterns": [".ccls", ".git"]
+        },
+        "haskell": {
+            "command": "hie-wrapper",
+            "rootPatterns": [
+                ".stack.yaml",
+                "cabal.config",
+                "package.yaml"
+            ],
+            "filetypes": [
+                "hs",
+                "lhs",
+                "haskell"
+            ],
+            "initializationOptions": {
+                "languageServerHaskell": {
+                }
+            }
         }
     },
     "solargraph.commandPath": "/home/jon/.asdf/shims/solargraph",
     "solargraph.diagnostics": true,
     "suggest.enablePreview": true,
     "coc.source.ultisnips.priority": 1,
-    "coc.preferences.formatOnSaveFiletypes": ["typescript"],
+    "coc.preferences.formatOnSaveFiletypes": ["typescript", "rust"],
     "tsserver.log": "verbose",
+    "diagnostic.checkCurrentLine": true,
     // "diagnostic.displayByAle": true,
     "tslint.autoFixOnSave": true,
     "tsserver.formatOnType": false,
+    "diagnostic-languageserver.filetypes": {
+        "sh": "shellcheck",
+        "erb": "erb"
+    },
+    "diagnostic-languageserver.linters": {
+        "erb": {
+            "sourceName": "erb",
+            "command": "ruby -r erb -e 'puts ERB.new($stdin.read.gsub(%{<%=},%{<%}), nil, %{-}).src< %t | ruby -c"
+        }
+    },
     "git.semanticCommit.filetypes": [
       "gitcommit",
       "markdown"
     ],
-    "python.jediEnabled": false
+    "python.jediEnabled": false,
+    "rust-analyzer.enableCargoWatchOnStartup": "enabled"
 }

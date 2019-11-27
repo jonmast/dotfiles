@@ -7,7 +7,6 @@ endif
 filetype off
 
 call plug#begin('~/.config/nvim/plugged')
-Plug 'w0rp/ale'
 Plug 'tpope/vim-obsession'
 Plug 'tpope/vim-rails'
 Plug 'tpope/vim-eunuch'
@@ -29,7 +28,7 @@ Plug 'vim-airline/vim-airline-themes'
 Plug 'ctrlpvim/ctrlp.vim'
 Plug 'FelikZ/ctrlp-py-matcher'
 Plug 'iurifq/ctrlp-rails.vim'
-Plug 'tomtom/tcomment_vim'
+Plug 'tpope/vim-commentary'
 Plug 'morhetz/gruvbox'
 Plug 'lifepillar/vim-solarized8'
 Plug 'kchmck/vim-coffee-script'
@@ -50,10 +49,12 @@ Plug 'editorconfig/editorconfig-vim'
 Plug 'embear/vim-localvimrc'
 Plug 'mhinz/vim-grepper'
 Plug 'JulesWang/css.vim'
+Plug 'alexlafroscia/postcss-syntax.vim'
 Plug 'mileszs/ack.vim'
 Plug 'nathanaelkane/vim-indent-guides'
 Plug 'cohama/lexima.vim'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
+Plug 'glacambre/firenvim', { 'do': function('firenvim#install') }
 call plug#end()
 filetype on
