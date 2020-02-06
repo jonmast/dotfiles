@@ -115,6 +115,7 @@ let g:coc_global_extensions = [
 \  'coc-diagnostic',
 \  'coc-stylelint',
 \  'coc-eslint',
+\  'coc-prettier'
 \]
 
 let g:lexima_enable_basic_rules = 0
