@@ -35,7 +35,6 @@
     "coc.preferences.formatOnSaveFiletypes": ["typescript", "rust"],
     "tsserver.log": "verbose",
     "diagnostic.checkCurrentLine": true,
-    // "diagnostic.displayByAle": true,
     "tslint.autoFixOnSave": true,
     "tsserver.formatOnType": false,
     "diagnostic-languageserver.filetypes": {
@@ -53,5 +52,5 @@
       "markdown"
     ],
     "python.jediEnabled": false,
-    "rust-analyzer.enableCargoWatchOnStartup": "enabled"
+    "rust-analyzer.cargo-watch.command": "clippy"
 }
