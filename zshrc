@@ -9,6 +9,9 @@ autoload -Uz compinit && compinit
 
 export PATH=.git/safe/../../bin:$PATH
 
+# load custom completions
+fpath=(~/.zsh $fpath)
+
 compdef g=git
 compdef mycli=mysql
 
