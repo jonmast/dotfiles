@@ -60,7 +60,10 @@ alias oc='oxidux connect'
 alias or='oxidux restart'
 
 alias bir="bundle && ir"
-alias ls="exa"
+
+if type exa &> /dev/null; then
+  alias ls="exa"
+fi
 
 alias rg="rg --max-columns=1000 --smart-case --type-add='haml:*.haml' --type-add='coffee:*.coffee'"
 
@@ -68,7 +71,7 @@ alias or='oxidux restart'
 alias oc='oxidux connect'
 alias bor='bundle && oxidux restart'
 
-alias sgrep="bundle show --paths | rg sellect | xargs rg"
+alias wgrep="bundle show --paths | rg "(workarea|weblinc)" | xargs rg"
 
 alias JSC="JS_DRIVER=chrome"
 alias hop='hub open-pr'

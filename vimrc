@@ -46,7 +46,9 @@ set list
 set listchars=tab:>\ ,trail:·,extends:>,precedes:<,nbsp:+
 set tags^=./.git/tags;
 
-set inccommand=nosplit
+if exists('&inccommand')
+  set inccommand=nosplit
+endif
 
 " gvim specific
 set mousehide  " Hide mouse after chars typed
@@ -153,11 +155,16 @@ augroup vimrcEx
   " autocmd FileType ruby,eruby setlocal iskeyword+=?
 
   " Autoclose invoker reload split
-  autocmd TermClose term://*:ir q
+  if has('nvim')
+    autocmd TermClose term://*:ir q
+  end
 
   autocmd FileType go setlocal nolist
 
   autocmd BufReadPost quickfix map <buffer> <MiddleMouse> gx
+
+  " Use ruby hightlighting for Workarea decorators
+  autocmd BufNewFile,BufRead *.decorator set syntax=ruby
 augroup END
 
 runtime macros/matchit.vim
@@ -240,6 +247,8 @@ let g:solarized_term_italics=1
 colorscheme gruvbox
 
 let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
+" Disable project detection in favor of just cwd
+let g:ctrlp_working_path_mode = ''
 
 let g:splitjoin_ruby_curly_braces=0
 let g:splitjoin_ruby_hanging_args=0

@@ -108,7 +108,7 @@ if type fasd &> /dev/null; then
 fi
 unset fasd_cache
 
-# Keybindings for history serarch
+# Keybindings for history search
 bindkey '^[[A' history-substring-search-up
 bindkey '^[[B' history-substring-search-down
 bindkey -M vicmd 'k' history-substring-search-up
