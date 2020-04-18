@@ -27,7 +27,6 @@ Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
 Plug 'ctrlpvim/ctrlp.vim'
 Plug 'FelikZ/ctrlp-py-matcher'
-Plug 'iurifq/ctrlp-rails.vim'
 Plug 'tpope/vim-commentary'
 Plug 'morhetz/gruvbox'
 Plug 'lifepillar/vim-solarized8'
@@ -55,6 +54,5 @@ Plug 'nathanaelkane/vim-indent-guides'
 Plug 'cohama/lexima.vim'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
-Plug 'glacambre/firenvim', { 'do': function('firenvim#install') }
 call plug#end()
 filetype on

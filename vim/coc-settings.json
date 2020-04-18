@@ -52,5 +52,6 @@
       "markdown"
     ],
     "python.jediEnabled": false,
-    "rust-analyzer.cargo-watch.command": "clippy"
+    "rust-analyzer.checkOnSave.command": "clippy",
+    "codeLens.enable": true
 }

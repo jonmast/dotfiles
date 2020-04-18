@@ -100,6 +100,16 @@ endfunction
 nnoremap <silent> gh :call CocAction('doHover')<CR>
 inoremap <silent><expr> <c-space> coc#refresh()
 
+" Use `[g` and `]g` to navigate diagnostics
+nmap <silent> [g <Plug>(coc-diagnostic-prev)
+nmap <silent> ]g <Plug>(coc-diagnostic-next)
+
+" GoTo code navigation.
+nmap <silent> gd <Plug>(coc-definition)
+nmap <silent> gy <Plug>(coc-type-definition)
+nmap <silent> gi <Plug>(coc-implementation)
+nmap <silent> gr <Plug>(coc-references)
+
 let g:coc_global_extensions = [
 \  'coc-css',
 \  'coc-dictionary',
@@ -175,9 +185,6 @@ vmap <Enter> <Plug>(EasyAlign)
 let mapleader = ' '
 nnoremap <leader>y :CtrlPBuffer<cr>
 nnoremap <leader>f :CtrlPMRUFiles<cr>
-nnoremap <leader>rm :CtrlPModels<cr>
-nnoremap <leader>rc :CtrlPControllers<cr>
-nnoremap <leader>rv :CtrlPViews<cr>
 nnoremap <Leader>e :e <C-R>=expand("%:p:h") . "/" <CR>
 nnoremap <Leader>h :nohl<CR>
 nnoremap <Leader>v :tabe ~/.vimrc<CR>
