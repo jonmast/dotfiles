@@ -73,6 +73,7 @@ alias or='oxidux restart'
 alias oc='oxidux connect'
 alias bor='bundle && oxidux restart'
 
+alias bgrep="bundle show --paths | xargs rg"
 alias wgrep="bundle show --paths | rg "(workarea|weblinc)" | xargs rg"
 
 alias JSC="JS_DRIVER=chrome"

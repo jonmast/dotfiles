@@ -127,7 +127,8 @@ let g:coc_global_extensions = [
 \  'coc-diagnostic',
 \  'coc-stylelint',
 \  'coc-eslint',
-\  'coc-prettier'
+\  'coc-prettier',
+\  'coc-yaml'
 \]
 
 let g:lexima_enable_basic_rules = 0
@@ -174,7 +175,7 @@ augroup vimrcEx
   autocmd BufReadPost quickfix map <buffer> <MiddleMouse> gx
 
   " Use ruby hightlighting for Workarea decorators
-  autocmd BufNewFile,BufRead *.decorator set syntax=ruby
+  autocmd BufNewFile,BufRead *.decorator set filetype=ruby
 augroup END
 
 runtime macros/matchit.vim
@@ -195,8 +196,8 @@ nnoremap <leader>gs :Gstatus<cr>
 nnoremap <leader>ga :Git add
 nnoremap <leader>gp :Gpush<cr>
 nnoremap <leader>gc :Gcommit -v<cr>
-nnoremap <leader>gc :Gcommit -v<cr>
-nnoremap <leader>gq :silent! !git add -A<cr>:Gcommit -v<cr>
+nnoremap <leader>gc :tab :Git commit -v<cr>
+nnoremap <leader>gq :silent! !git add -A<cr>:tab :Git commit -v<cr>
 nnoremap <leader>gb :Gblame<cr>
 
 " System clipboard mappings

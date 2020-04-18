@@ -28,7 +28,6 @@
             }
         }
     },
-    "solargraph.commandPath": "/home/jon/.asdf/shims/solargraph",
     "solargraph.diagnostics": true,
     "suggest.enablePreview": true,
     "coc.source.ultisnips.priority": 1,
@@ -39,12 +38,40 @@
     "tsserver.formatOnType": false,
     "diagnostic-languageserver.filetypes": {
         "sh": "shellcheck",
-        "erb": "erb"
+        "erb": "erb",
+        "ruby": "rubocop"
     },
     "diagnostic-languageserver.linters": {
         "erb": {
             "sourceName": "erb",
             "command": "ruby -r erb -e 'puts ERB.new($stdin.read.gsub(%{<%=},%{<%}), nil, %{-}).src< %t | ruby -c"
+        },
+        "rubocop": {
+            "command": "bundle",
+            "rootPatterns": ["Gemfile"],
+            "args": [
+                "exec",
+                "rubocop",
+                "--format",
+                "json",
+                "--stdin",
+                "%filepath"
+            ],
+            "sourceName": "rubocop",
+            "parseJson": {
+                "errorsRoot": "files[0].offenses",
+                "line": "location.line",
+                "column": "location.column",
+                "message": "${message}",
+                "security": "severity"
+            },
+            "securities": {
+                "error": "error",
+                "fatal": "error",
+                "convention": "info",
+                "warning": "warning",
+                "refactor": "hint"
+            }
         }
     },
     "git.semanticCommit.filetypes": [
