@@ -3,17 +3,11 @@ export PATH=$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin
 export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
 export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
 
-autoload -Uz compinit && compinit
-[[ -a $HOME/.asdf/asdf.sh ]] && source $HOME/.asdf/asdf.sh
-[[ -a $HOME/.asdf/completions/asdf.bash ]] && source $HOME/.asdf/completions/asdf.bash
 
 export PATH=.git/safe/../../bin:$PATH
 
 # load custom completions
 fpath=(~/.zsh $fpath)
-
-compdef g=git
-compdef mycli=mysql
 
 # Load antigen
 source ~/.dotfiles/antigen/antigen.zsh
@@ -31,8 +25,17 @@ antigen bundle archlinux
 antigen bundle rails
 antigen bundle mix
 antigen bundle djui/alias-tips
+antigen bundle docker
 antigen apply
 
+# ASDF requires compinit, but it should be run after OMZ init
+autoload -Uz compinit
+compinit
+[[ -a $HOME/.asdf/asdf.sh ]] && source $HOME/.asdf/asdf.sh
+[[ -a $HOME/.asdf/completions/asdf.bash ]] && source $HOME/.asdf/completions/asdf.bash
+
+compdef g=git
+compdef mycli=mysql
 setopt no_hist_verify
 HISTSIZE=1000000
 SAVEHIST=1000000
@@ -57,6 +60,10 @@ if [[ -a ~/.LS_COLORS ]]; then
 fi
 
 export EDITOR=nvim
+
+if type delta &> /dev/null; then
+  export GIT_PAGER=delta
+fi
 
 # export TERM="xterm-256color"
 alias tmux="env TERM=xterm-256color tmux" #hopefully fix strange vim+tmux issues

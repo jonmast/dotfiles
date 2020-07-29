@@ -6,7 +6,6 @@
 	default = simple
 [core]
 	excludesfile = ~/.gitignore_global
-	pager = diff-so-fancy | less --tabs=4 -RFX
 [alias]
 	unstage = reset HEAD --
   ctags = "!sh -c '[ -f .git/hooks/ctags ] || git init; .git/hooks/ctags' git-ctags"
@@ -35,3 +34,8 @@
 	required = true
 [commit]
 	gpgsign = true
+
+[include]
+	path = ~/.gitconfig.local
+[pull]
+	ff = only

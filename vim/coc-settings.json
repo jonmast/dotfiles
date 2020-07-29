@@ -28,7 +28,7 @@
             }
         }
     },
-    "solargraph.diagnostics": true,
+    "solargraph.diagnostics": false,
     "suggest.enablePreview": true,
     "coc.source.ultisnips.priority": 1,
     "coc.preferences.formatOnSaveFiletypes": ["typescript", "rust"],
@@ -80,5 +80,8 @@
     ],
     "python.jediEnabled": false,
     "rust-analyzer.checkOnSave.command": "clippy",
-    "codeLens.enable": true
+    "codeLens.enable": true,
+    "javascript.referencesCodeLens.enable": false,
+    "typescript.referencesCodeLens.enable": false,
+    "yaml.completion": true
 }

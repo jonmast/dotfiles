@@ -22,9 +22,9 @@ alias gfom='git fetch origin master:master'
 alias gfod='git fetch origin develop:develop'
 alias gci='git commit -v'
 alias gcd='echo "WARN: use git switch instead\n"; git checkout develop'
-alias gcdp='echo "WARN: use git switch instead\n"; git checkout deploy'
+alias gcm='echo "WARN: use git switch instead\n"; git checkout master'
 alias gswd='git switch develop'
-alias gswdp='git switch deploy'
+alias gswm='git switch master'
 alias gpb='git publish'
 alias gflpb='git flow publish'
 alias gmg='git merge'
@@ -58,23 +58,21 @@ alias bu="bundle update"
 alias bi="bundle install"
 alias bcn="bundle clean"
 
-alias oc='oxidux connect'
-alias or='oxidux restart'
-
-alias bir="bundle && ir"
-
 if type exa &> /dev/null; then
   alias ls="exa"
 fi
 
-alias rg="rg --max-columns=1000 --smart-case --type-add='haml:*.haml' --type-add='coffee:*.coffee'"
+alias rg="rg --max-columns=1000 --smart-case --type-add='haml:*.haml' --type-add='coffee:*.coffee' --type-add='ruby:*.decorator'"
 
 alias or='oxidux restart'
 alias oc='oxidux connect'
+alias os='oxidux stop'
 alias bor='bundle && oxidux restart'
 
 alias bgrep="bundle show --paths | xargs rg"
 alias wgrep="bundle show --paths | rg "(workarea|weblinc)" | xargs rg"
 
 alias JSC="JS_DRIVER=chrome"
-alias hop='hub open-pr'
+alias gop='git open-pr'
+
+alias tree='exa -T'

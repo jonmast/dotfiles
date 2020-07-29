@@ -127,8 +127,7 @@ let g:coc_global_extensions = [
 \  'coc-diagnostic',
 \  'coc-stylelint',
 \  'coc-eslint',
-\  'coc-prettier',
-\  'coc-yaml'
+\  'coc-prettier'
 \]
 
 let g:lexima_enable_basic_rules = 0
@@ -216,7 +215,8 @@ nnoremap <Leader>a :TestSuite<CR>
 let test#strategy = 'dispatch'
 " Don't try to guess test file
 let g:test#no_alternate = 1
-let test#ruby#cucumber#executable='bin/spinach'
+
+let test#custom_runners = {'Ruby': ['wadecorator']}
 
 " Typescript support
 let g:test#javascript#mocha#file_pattern = '\v.\.test\.(ts|js|tsx|jsx)$'
@@ -263,7 +263,8 @@ let g:splitjoin_ruby_hanging_args=0
 
 let g:localvimrc_persistent=1
 
-let g:ale_sign_column_always = 1
+set signcolumn=yes
+set cmdheight=2
 let g:airline#extensions#ale#enabled = 1
 let g:ale_linters = {
 \   'php': ['hack', 'langserver', 'php', 'phpmd', 'phpstan'],

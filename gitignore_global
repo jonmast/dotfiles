@@ -14,6 +14,8 @@ Session.vim
 
 *~
 .directory
+# Mac
+.DS_Store
 #ctags stuff
 # Ignore tags created by etags, ctags, gtags (GNU global) and cscope
 TAGS
@@ -28,14 +30,10 @@ cscope.files
 cscope.out
 cscope.in.out
 cscope.po.out
-# Zeus stuff
-custom_plan.rb
-zeus.json
 #lockfile
 *.lck
 *.pid
 
-vendor/cache/libv8-*-linux.gem
 .gemlocal
 .buildpath
 .project
