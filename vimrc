@@ -70,12 +70,6 @@ if executable('rg')
   set grepprg=rg\ --vimgrep\ --no-heading
   set grepformat=%f:%l:%c:%m,%f:%l:%m
 
-  " Use ag in CtrlP for listing files. Lightning fast and respects .gitignore
-  let g:ctrlp_user_command = 'rg --color=never -g"!vendor/cache/*" --files %s'
-
-  " ag is fast enough that CtrlP doesn't need to cache
-  let g:ctrlp_use_caching = 0
-
   " Ack.vim adds some niceties for searching
   let g:ackprg = 'rg --vimgrep --no-heading'
 endif
@@ -172,6 +166,7 @@ augroup vimrcEx
   autocmd FileType go setlocal nolist
 
   autocmd BufReadPost quickfix map <buffer> <MiddleMouse> gx
+  autocmd BufReadPost quickfix map <buffer> gX /tmp\/screenshot<CR>gx
 
   " Use ruby hightlighting for Workarea decorators
   autocmd BufNewFile,BufRead *.decorator set filetype=ruby
@@ -183,8 +178,6 @@ noremap <C-s> <esc>:w<cr>
 vmap <Enter> <Plug>(EasyAlign)
 
 let mapleader = ' '
-nnoremap <leader>y :CtrlPBuffer<cr>
-nnoremap <leader>f :CtrlPMRUFiles<cr>
 nnoremap <Leader>e :e <C-R>=expand("%:p:h") . "/" <CR>
 nnoremap <Leader>h :nohl<CR>
 nnoremap <Leader>v :tabe ~/.vimrc<CR>
@@ -232,6 +225,8 @@ nnoremap : ;
 vnoremap ; :
 vnoremap : ;
 
+nnoremap <silent> <C-p> :Files<CR>
+
 " bind K to grep word under cursor
 nnoremap K :Ack! "\b<C-R><C-W>\b"<CR>:cw<CR>
 
@@ -254,9 +249,7 @@ let g:solarized_term_italics=1
 " colorscheme solarized8_dark
 colorscheme gruvbox
 
-let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
-" Disable project detection in favor of just cwd
-let g:ctrlp_working_path_mode = ''
+let g:fzf_history_dir = '~/.cache/fzf-history'
 
 let g:splitjoin_ruby_curly_braces=0
 let g:splitjoin_ruby_hanging_args=0
