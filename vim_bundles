@@ -47,6 +47,7 @@ Plug 'mileszs/ack.vim'
 Plug 'nathanaelkane/vim-indent-guides'
 Plug 'cohama/lexima.vim'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'jackguo380/vim-lsp-cxx-highlight'
 Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
 call plug#end()
 filetype on

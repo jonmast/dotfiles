@@ -105,10 +105,10 @@ nmap <silent> gi <Plug>(coc-implementation)
 nmap <silent> gr <Plug>(coc-references)
 
 let g:coc_global_extensions = [
+\  'coc-rust-analyzer',
 \  'coc-css',
 \  'coc-dictionary',
 \  'coc-json',
-\  'coc-rust-analyzer',
 \  'coc-solargraph',
 \  'coc-syntax',
 \  'coc-tsserver',
@@ -198,6 +198,24 @@ nnoremap <Leader>p "+p
 nnoremap <Leader>P "+P
 " Make middle click copy work as expected
 vmap <LeftRelease> "*ygv
+
+" Hack to get rid of DOS line endings in Sway
+" https://github.com/neovim/neovim/issues/10223#issuecomment-676721570
+if exists('$WAYLAND_DISPLAY')
+  " clipboard on wayland with newline fix
+  let g:clipboard = {
+        \   'name': 'WL-Clipboard with ^M Trim',
+        \   'copy': {
+        \      '+': 'wl-copy --foreground --type text/plain',
+        \      '*': 'wl-copy --foreground --type text/plain --primary',
+        \    },
+        \   'paste': {
+        \      '+': {-> systemlist('wl-paste --no-newline | sed -e "s/\r$//"', '', 1)},
+        \      '*': {-> systemlist('wl-paste --no-newline --primary | sed -e "s/\r$//"', '', 1)},
+        \   },
+        \   'cache_enabled': 1,
+        \ }
+endif
 
 " test mappings
 nnoremap <Leader>t :TestFile<CR>

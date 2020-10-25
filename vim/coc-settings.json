@@ -1,14 +1,12 @@
 {
     "languageserver": {
-        "intelephense": {
-            "command": "node",
-            "args": ["/home/jon/.yarn/bin/intelephense", "--stdio"],
-            "filetypes": ["php"]
-        },
         "ccls": {
             "command": "ccls",
             "filetypes": ["c", "cpp", "objc", "objcpp"],
-            "rootPatterns": [".ccls", ".git"]
+            "rootPatterns": [".ccls", ".git", "compile_commands.json"],
+            "initializationOptions": {
+                "highlight": { "lsRanges": true }
+            }
         },
         "haskell": {
             "command": "hie-wrapper",
@@ -26,12 +24,17 @@
                 "languageServerHaskell": {
                 }
             }
+        },
+        "elmLS": {
+            "command": "elm-language-server",
+            "filetypes": ["elm"],
+            "rootPatterns": ["elm.json"]
         }
     },
     "solargraph.diagnostics": false,
     "suggest.enablePreview": true,
     "coc.source.ultisnips.priority": 1,
-    "coc.preferences.formatOnSaveFiletypes": ["typescript", "rust"],
+    "coc.preferences.formatOnSaveFiletypes": ["typescript", "rust", "elm", "c", "cpp", "html"],
     "tsserver.log": "verbose",
     "diagnostic.checkCurrentLine": true,
     "tslint.autoFixOnSave": true,

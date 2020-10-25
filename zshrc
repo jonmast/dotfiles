@@ -1,10 +1,8 @@
-export PATH=$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin
+export PATH=.git/safe/../../bin:$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin
 
+export CARGO_TARGET_DIR=~/.cargo/build_cache
 export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
 export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
-
-
-export PATH=.git/safe/../../bin:$PATH
 
 # load custom completions
 fpath=(~/.zsh $fpath)
