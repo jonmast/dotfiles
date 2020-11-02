@@ -261,10 +261,7 @@ command! MN tabe my-notes.md
 
 set cursorline
 set background=dark
-set termguicolors
-let g:solarized_term_italics=1
 
-" colorscheme solarized8_dark
 colorscheme gruvbox
 
 let g:fzf_history_dir = '~/.cache/fzf-history'
