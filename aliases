@@ -14,7 +14,6 @@ alias gma='git commit -am'
 alias gb='git branch'
 alias gba='git branch -a'
 alias gc='git checkout'
-alias gco='gc'
 alias gra='git remote add'
 alias grr='git remote rm'
 alias gcl='git clone'
@@ -30,6 +29,7 @@ alias gflpb='git flow publish'
 alias gmg='git merge'
 alias gmg-='git merge -'
 alias gsw='git switch'
+unalias gp
 
 alias py='python'
 alias mm=middleman
@@ -37,7 +37,6 @@ alias mm=middleman
 alias v=nvim
 alias vi=nvim
 alias vim=nvim
-alias vims='vim -S Session.vim'
 
 alias ya=yaourt
 
@@ -69,8 +68,8 @@ alias oc='oxidux connect'
 alias os='oxidux stop'
 alias bor='bundle && oxidux restart'
 
-alias bgrep="bundle show --paths | xargs rg"
-alias wgrep="bundle show --paths | rg "(workarea|weblinc)" | xargs rg"
+alias bgrep="bundle list --paths | xargs rg"
+alias wgrep="bundle list --paths | rg "(workarea|weblinc)" | xargs rg"
 
 alias JSC="JS_DRIVER=chrome"
 alias gop='git open-pr'

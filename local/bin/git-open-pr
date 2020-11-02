@@ -1,12 +1,17 @@
 #!/usr/bin/env zsh
 
 url=$(git remote get-url origin)
+
 if [[ "$url" == *stash.tools.weblinc.com* ]] then
   sans_domain=${url/*7999\//}
   project_repo=${sans_domain/.git/}
   arr=(${(@s|/|)project_repo})
-
   open "https://stash.tools.weblinc.com/projects/${arr[1]}/repos/${arr[2]}/compare/commits?sourceBranch=$(git rev-parse --abbrev-ref HEAD)"
+elif [[ "$url" == *bitbucket.org* ]] then
+  sans_domain=${url/*bitbucket.org:/}
+  project_repo=${sans_domain/.git/}
+  arr=(${(@s|/|)project_repo})
+  open "https://bitbucket.org/${arr[1]}/${arr[2]}/pull-requests/new?sourceBranch=$(git rev-parse --abbrev-ref HEAD)"
 else
   hub compare
 fi

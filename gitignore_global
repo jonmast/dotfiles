@@ -42,3 +42,5 @@ cscope.po.out
 .solargraph.yml
 my-notes.md
 .tool-versions
+.generators
+.rakeTasks

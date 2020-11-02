@@ -45,6 +45,8 @@ set display+=lastline
 set list
 set listchars=tab:>\ ,trail:·,extends:>,precedes:<,nbsp:+
 set tags^=./.git/tags;
+set foldmethod=syntax
+set foldlevelstart=99
 
 if exists('&inccommand')
   set inccommand=nosplit
@@ -168,8 +170,12 @@ augroup vimrcEx
   autocmd BufReadPost quickfix map <buffer> <MiddleMouse> gx
   autocmd BufReadPost quickfix map <buffer> gX /tmp\/screenshot<CR>gx
 
-  " Use ruby hightlighting for Workarea decorators
+  " Use ruby highlighting for Workarea decorators
   autocmd BufNewFile,BufRead *.decorator set filetype=ruby
+
+  " Folds
+  autocmd Syntax haml setlocal foldmethod=indent
+  autocmd Syntax haml normal zR
 augroup END
 
 runtime macros/matchit.vim

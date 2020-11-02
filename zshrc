@@ -3,6 +3,8 @@ export PATH=.git/safe/../../bin:$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.ca
 export CARGO_TARGET_DIR=~/.cargo/build_cache
 export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
 export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
+export NVIM_TUI_ENABLE_TRUE_COLOR=1
+export HOMEBREW_CASK_OPTS="--no-quarantine"
 
 # load custom completions
 fpath=(~/.zsh $fpath)
@@ -18,7 +20,7 @@ antigen bundle git-flow
 antigen bundle capistrano
 antigen bundle history-substring-search
 antigen bundle vi-mode
-antigen bundle zsh-users/zsh-syntax-highlighting
+antigen bundle zdharma/fast-syntax-highlighting
 antigen bundle archlinux
 antigen bundle rails
 antigen bundle mix
