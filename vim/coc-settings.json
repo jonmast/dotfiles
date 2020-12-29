@@ -82,6 +82,7 @@
     ],
     "python.jediEnabled": false,
     "rust-analyzer.checkOnSave.command": "clippy",
+    "rust-analyzer.lens.run": false,
     "codeLens.enable": true,
     "javascript.referencesCodeLens.enable": false,
     "typescript.referencesCodeLens.enable": false,

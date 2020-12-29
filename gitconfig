@@ -5,7 +5,7 @@
 [push]
 	default = simple
 [core]
-	excludesfile = /Users/jonmast/.gitignore_global
+	excludesfile = ~/.gitignore_global
 [alias]
 	unstage = reset HEAD --
   ctags = "!sh -c '[ -f .git/hooks/ctags ] || git init; .git/hooks/ctags' git-ctags"
