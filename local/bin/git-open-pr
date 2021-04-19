@@ -11,7 +11,7 @@ elif [[ "$url" == *bitbucket.org* ]] then
   sans_domain=${url/*bitbucket.org:/}
   project_repo=${sans_domain/.git/}
   arr=(${(@s|/|)project_repo})
-  open "https://bitbucket.org/${arr[1]}/${arr[2]}/pull-requests/new?sourceBranch=$(git rev-parse --abbrev-ref HEAD)"
+  open "https://bitbucket.org/${arr[1]}/${arr[2]}/pull-requests/new?source=$(git rev-parse --abbrev-ref HEAD)&t=1"
 else
   hub compare
 fi

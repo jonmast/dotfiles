@@ -35,13 +35,15 @@
     "suggest.enablePreview": true,
     "coc.source.ultisnips.priority": 1,
     "coc.preferences.formatOnSaveFiletypes": ["typescript", "rust", "elm", "c", "cpp", "html", "go"],
+    "coc.preferences.currentFunctionSymbolAutoUpdate": true,
     "diagnostic.checkCurrentLine": true,
     "tslint.autoFixOnSave": true,
     "tsserver.formatOnType": false,
     "diagnostic-languageserver.filetypes": {
         "sh": "shellcheck",
         "erb": "erb",
-        "ruby": "rubocop"
+        "ruby": "rubocop",
+        "php": "phpcs"
     },
     "diagnostic-languageserver.linters": {
         "erb": {
@@ -74,11 +76,34 @@
                 "warning": "warning",
                 "refactor": "hint"
             }
+        },
+        "phpcs": {
+            "command": "phpcs",
+            "debounce": 100,
+            "rootPatterns": [ "composer.json", "composer.lock", "vendor", ".git" ],
+            "args": [ "--standard=PSR2", "--report=emacs", "-s", "-" ],
+            "offsetLine": 0,
+            "offsetColumn": 0,
+            "sourceName": "phpcs",
+            "formatLines": 1,
+            "formatPattern": [
+                "^.*:(\\d+):(\\d+):\\s+(.*)\\s+-\\s+(.*)(\\r|\\n)*$",
+                {
+                    "line": 1,
+                    "column": 2,
+                    "message": 4,
+                    "security": 3
+                }
+            ],
+            "securities": {
+                "error": "error",
+                "warning": "warning"
+            }
         }
     },
     "git.semanticCommit.filetypes": [
-      "gitcommit",
-      "markdown"
+        "gitcommit",
+        "markdown"
     ],
     "python.jediEnabled": false,
     "rust-analyzer.checkOnSave.command": "clippy",
@@ -86,5 +111,10 @@
     "codeLens.enable": true,
     "javascript.referencesCodeLens.enable": false,
     "typescript.referencesCodeLens.enable": false,
-    "yaml.completion": true
+    "suggest.noselect": true,
+    "yaml.completion": true,
+    "yaml.schemaStore.enable": true,
+    "yaml.schemas": {
+        "https://kubernetesjsonschema.dev/v1.16.0/all.json": ["*-deployment.yaml", "k8s/*.yaml"]
+    }
 }

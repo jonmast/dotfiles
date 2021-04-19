@@ -13,8 +13,9 @@ Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-abolish'
 Plug 'tpope/vim-surround'
 Plug 'tpope/vim-bundler'
-Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-fugitive', { 'tag': '*' }
 Plug 'tommcdo/vim-fugitive-blame-ext'
+Plug 'tommcdo/vim-fubitive'
 Plug 'tpope/vim-rhubarb'
 Plug 'tpope/vim-dispatch'
 Plug 'tpope/vim-repeat'
@@ -45,9 +46,13 @@ Plug 'vim-language-dept/css.vim'
 Plug 'alexlafroscia/postcss-syntax.vim'
 Plug 'mileszs/ack.vim'
 Plug 'nathanaelkane/vim-indent-guides'
-Plug 'cohama/lexima.vim'
+" Plug 'cohama/lexima.vim'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'jackguo380/vim-lsp-cxx-highlight'
-Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
+Plug 'haginaga/vim-compiler-phpunit'
+if has('python3')
+    Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
+    Plug 'vim-vdebug/vdebug'
+endif
 call plug#end()
 filetype on

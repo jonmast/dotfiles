@@ -31,7 +31,7 @@ set sidescroll=1
 set history=2000        " Number of things to remember in history.
 set ttimeout
 set ttimeoutlen=10     " Time to wait after ESC (default causes an annoying delay)
-set completeopt=menuone
+set completeopt=menuone,noinsert,noselect,preview
 set updatetime=300
 
 set splitbelow
@@ -47,6 +47,7 @@ set listchars=tab:>\ ,trail:·,extends:>,precedes:<,nbsp:+
 set tags^=./.git/tags;
 set foldmethod=syntax
 set foldlevelstart=99
+let mapleader = ' '
 
 if exists('&inccommand')
   set inccommand=nosplit
@@ -95,16 +96,36 @@ endfunction
 
 nnoremap <silent> gh :call CocAction('doHover')<CR>
 inoremap <silent><expr> <c-space> coc#refresh()
+" inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
+"                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+
+inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+
 
 " Use `[g` and `]g` to navigate diagnostics
 nmap <silent> [g <Plug>(coc-diagnostic-prev)
 nmap <silent> ]g <Plug>(coc-diagnostic-next)
+
+nmap <leader>rn <Plug>(coc-rename)
 
 " GoTo code navigation.
 nmap <silent> gd <Plug>(coc-definition)
 nmap <silent> gy <Plug>(coc-type-definition)
 nmap <silent> gi <Plug>(coc-implementation)
 nmap <silent> gr <Plug>(coc-references)
+
+" autofix
+nmap <leader>qf <Plug>(coc-fix-current)
+
+" Map function and class text objects
+xmap if <Plug>(coc-funcobj-i)
+omap if <Plug>(coc-funcobj-i)
+xmap af <Plug>(coc-funcobj-a)
+omap af <Plug>(coc-funcobj-a)
+xmap ic <Plug>(coc-classobj-i)
+omap ic <Plug>(coc-classobj-i)
+xmap ac <Plug>(coc-classobj-a)
+omap ac <Plug>(coc-classobj-a)
 
 let g:coc_global_extensions = [
 \  'coc-rust-analyzer',
@@ -123,12 +144,13 @@ let g:coc_global_extensions = [
 \  'coc-diagnostic',
 \  'coc-stylelint',
 \  'coc-eslint',
+\  'coc-pairs',
 \  'coc-prettier'
 \]
 
-let g:lexima_enable_basic_rules = 0
+" let g:lexima_enable_basic_rules = 1
 
-inoremap <expr> <Plug>LeximaCR lexima#expand('<LT>CR>', 'i')
+" inoremap <expr> <Plug>LeximaCR lexima#expand('<LT>CR>', 'i')
 
 let g:UltiSnipsExpandTrigger = "<c-u>"
 let g:UltiSnipsJumpForwardTrigger = "<c-j>"
@@ -183,7 +205,6 @@ nnoremap <F5> :GundoToggle<CR>
 noremap <C-s> <esc>:w<cr>
 vmap <Enter> <Plug>(EasyAlign)
 
-let mapleader = ' '
 nnoremap <Leader>e :e <C-R>=expand("%:p:h") . "/" <CR>
 nnoremap <Leader>h :nohl<CR>
 nnoremap <Leader>v :tabe ~/.vimrc<CR>
@@ -197,6 +218,7 @@ nnoremap <leader>gc :Gcommit -v<cr>
 nnoremap <leader>gc :tab :Git commit -v<cr>
 nnoremap <leader>gq :silent! !git add -A<cr>:tab :Git commit -v<cr>
 nnoremap <leader>gb :Gblame<cr>
+nnoremap <leader>gf :GBrowse<cr>
 
 " System clipboard mappings
 vmap <Leader>y "+y
@@ -274,6 +296,7 @@ let g:fzf_history_dir = '~/.cache/fzf-history'
 
 let g:splitjoin_ruby_curly_braces=0
 let g:splitjoin_ruby_hanging_args=0
+let g:ruby_indent_assignment_style='variable'
 
 let g:localvimrc_persistent=1
 

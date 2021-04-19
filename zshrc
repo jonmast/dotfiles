@@ -5,6 +5,7 @@ export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
 export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
 export NVIM_TUI_ENABLE_TRUE_COLOR=1
 export HOMEBREW_CASK_OPTS="--no-quarantine"
+export FZF_DEFAULT_COMMAND='rg --files'
 
 # load custom completions
 fpath=(~/.zsh $fpath)

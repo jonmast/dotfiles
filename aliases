@@ -61,7 +61,11 @@ if type exa &> /dev/null; then
   alias ls="exa"
 fi
 
-alias rg="rg --max-columns=1000 --smart-case --type-add='haml:*.haml' --type-add='coffee:*.coffee' --type-add='ruby:*.decorator'"
+if type /usr/local/bin/grm &> /dev/null; then
+  alias rm="/usr/local/bin/grm"
+fi
+
+alias rg="rg --max-columns=1000 --max-columns-preview --smart-case --type-add='haml:*.haml' --type-add='coffee:*.coffee' --type-add='ruby:*.decorator'"
 
 alias or='oxidux restart'
 alias oc='oxidux connect'
