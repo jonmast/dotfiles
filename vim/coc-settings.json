@@ -39,6 +39,7 @@
     "tslint.autoFixOnSave": true,
     "tsserver.formatOnType": false,
     "diagnostic-languageserver.filetypes": {
+        "sh.env": "dotenv-linter",
         "sh": "shellcheck",
         "erb": "erb",
         "ruby": "rubocop",
@@ -98,6 +99,23 @@
                 "error": "error",
                 "warning": "warning"
             }
+        },
+        "dotenv-linter": {
+            "command": "dotenv-linter",
+            "sourceName": "dotenv-linter",
+            "rootPatterns": [".env", ".env.*"],
+            "args": [],
+            "offsetLine": 0,
+            "offsetColumn": 0,
+            "formatPattern": [
+                "^(.*?):(\\d+) (.*)$",
+                {
+                    "sourceName": 1,
+                    "sourceNameFilter": true,
+                    "line": 2,
+                    "message": 3
+                }
+            ]
         }
     },
     "git.semanticCommit.filetypes": [

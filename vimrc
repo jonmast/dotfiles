@@ -195,6 +195,8 @@ augroup vimrcEx
   " Use ruby highlighting for Workarea decorators
   autocmd BufNewFile,BufRead *.decorator set filetype=ruby
 
+  autocmd BufNewFile,BufRead *.env set filetype=sh.env
+
   " Folds
   autocmd Syntax haml setlocal foldmethod=indent
   autocmd Syntax haml normal zR
