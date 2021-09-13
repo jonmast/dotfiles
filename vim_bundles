@@ -46,10 +46,11 @@ Plug 'vim-language-dept/css.vim'
 Plug 'alexlafroscia/postcss-syntax.vim'
 Plug 'mileszs/ack.vim'
 Plug 'nathanaelkane/vim-indent-guides'
-" Plug 'cohama/lexima.vim'
+Plug 'tpope/vim-endwise'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'jackguo380/vim-lsp-cxx-highlight'
 Plug 'haginaga/vim-compiler-phpunit'
+Plug 'pantharshit00/vim-prisma'
 if has('python3')
     Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
     Plug 'vim-vdebug/vdebug'

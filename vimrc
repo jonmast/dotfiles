@@ -47,6 +47,7 @@ set listchars=tab:>\ ,trail:·,extends:>,precedes:<,nbsp:+
 set tags^=./.git/tags;
 set foldmethod=syntax
 set foldlevelstart=99
+set hidden
 let mapleader = ' '
 
 if exists('&inccommand')
@@ -94,12 +95,13 @@ function! s:check_back_space() abort
   return !col || getline('.')[col - 1]  =~# '\s'
 endfunction
 
-nnoremap <silent> gh :call CocAction('doHover')<CR>
+nnoremap <silent> gh :call CocActionAsync('doHover')<CR>
 inoremap <silent><expr> <c-space> coc#refresh()
 " inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
 "                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 
-inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+let g:endwise_no_mappings = 1
+inoremap <silent><expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>\<c-r>=EndwiseDiscretionary()\<CR>"
 
 
 " Use `[g` and `]g` to navigate diagnostics
@@ -182,11 +184,6 @@ augroup vimrcEx
   " for now
   " autocmd FileType ruby,eruby setlocal iskeyword+=?
 
-  " Autoclose invoker reload split
-  if has('nvim')
-    autocmd TermClose term://*:ir q
-  end
-
   autocmd FileType go setlocal nolist
 
   autocmd BufReadPost quickfix map <buffer> <MiddleMouse> gx
@@ -200,6 +197,11 @@ augroup vimrcEx
   " Folds
   autocmd Syntax haml setlocal foldmethod=indent
   autocmd Syntax haml normal zR
+
+  autocmd FileType php setlocal commentstring=//%s
+
+  " Turn off annoying shellcheck for dotenv files
+  autocmd BufNewFile,BufRead .env let b:coc_diagnostic_disable=1
 augroup END
 
 runtime macros/matchit.vim
@@ -213,7 +215,7 @@ nnoremap <Leader>v :tabe ~/.vimrc<CR>
 nnoremap <Leader>w :w<CR>
 
 "Git shortcuts
-nnoremap <leader>gs :Gstatus<cr>
+nnoremap <leader>gs :Git<cr>
 nnoremap <leader>ga :Git add
 nnoremap <leader>gp :Gpush<cr>
 nnoremap <leader>gc :Gcommit -v<cr>
