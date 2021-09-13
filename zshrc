@@ -16,9 +16,6 @@ DEFAULT_USER="jon"
 COMPLETION_WAITING_DOTS="true"
 antigen use oh-my-zsh
 antigen bundle git
-antigen bundle git-flow
-# antigen bundle bundler
-antigen bundle capistrano
 antigen bundle history-substring-search
 antigen bundle vi-mode
 antigen bundle zdharma/fast-syntax-highlighting
@@ -27,6 +24,7 @@ antigen bundle rails
 antigen bundle mix
 antigen bundle djui/alias-tips
 antigen bundle docker
+antigen bundle docker-compose
 antigen apply
 
 # ASDF requires compinit, but it should be run after OMZ init
