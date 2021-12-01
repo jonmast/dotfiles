@@ -21,7 +21,6 @@ antigen bundle vi-mode
 antigen bundle zdharma/fast-syntax-highlighting
 antigen bundle archlinux
 antigen bundle rails
-antigen bundle mix
 antigen bundle djui/alias-tips
 antigen bundle docker
 antigen bundle docker-compose
@@ -81,13 +80,6 @@ fbr() {
   git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
 }
 
-# Like fbr, but only for local feature branches
-ffbr() {
-  local branch
-  branch=$(git flow feature | fzf-tmux +m) &&
-    git flow feature checkout $(echo $branch | sed "s/.* //")
-}
-
 
 unalias g
 function g {
@@ -104,15 +96,9 @@ function time_since_last_commit() {
   git log -1 --pretty=format:"%ar" | sed 's/\([0-9]*\) \(.\).*/\1\2/'
 }
 
-fasd_cache="$ZSH_CACHE_DIR/.fasd-init-cache"
-if type fasd &> /dev/null; then
-  [[ -a $fasd_cache ]] || fasd --init posix-alias \
-    zsh-hook zsh-ccomp zsh-ccomp-install zsh-wcomp zsh-wcomp-install \
-    >| "$fasd_cache"
-
-  source $fasd_cache
+if type zoxide &> /dev/null; then
+  eval "$(zoxide init zsh)"
 fi
-unset fasd_cache
 
 # Keybindings for history search
 bindkey '^[[A' history-substring-search-up
@@ -123,6 +109,3 @@ bindkey -M vicmd 'j' history-substring-search-down
 if type starship &> /dev/null; then
   eval "$(starship init zsh)"
 fi
-
-# count potential duplicate migrations
-# for file in $(cat files); do f=$(echo $file | sed s/[^_]*_//); find db/migrate -name "*$f" | wc -l | xargs echo $file; done

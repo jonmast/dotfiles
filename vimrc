@@ -1,4 +1,9 @@
 set rtp^=/usr/share/vim/vimfiles/
+
+" testing coc extensions
+" set rtp^=~/dev/coc-dev/coc-rust-analyzer
+" let g:coc_node_args = ['--nolazy', '--inspect-brk=6045']
+
 set hlsearch           " highlight searches
 set incsearch          " do incremental searching
 set showmatch          " jump to matching brackets
@@ -60,7 +65,6 @@ if v:version >= 703
     "undo settings
     set undodir=~/.vim/undofiles
     set undofile
-
 endif
 if has("gui_running")
   " GUI is running or is about to start.
@@ -70,7 +74,6 @@ endif
 
 " RipGrep
 if executable('rg')
-  " Use ag over grep
   set grepprg=rg\ --vimgrep\ --no-heading
   set grepformat=%f:%l:%c:%m,%f:%l:%m
 
@@ -101,7 +104,8 @@ inoremap <silent><expr> <c-space> coc#refresh()
 "                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 
 let g:endwise_no_mappings = 1
-inoremap <silent><expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>\<c-r>=EndwiseDiscretionary()\<CR>"
+inoremap <silent><expr> <cr> pumvisible() ? "\<C-y>\<c-r>=EndwiseDiscretionary()\<CR>" 
+                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>\<c-r>=EndwiseDiscretionary()\<CR>"
 
 
 " Use `[g` and `]g` to navigate diagnostics
@@ -145,14 +149,10 @@ let g:coc_global_extensions = [
 \  'coc-python',
 \  'coc-diagnostic',
 \  'coc-stylelint',
-\  'coc-eslint',
 \  'coc-pairs',
 \  'coc-prettier'
 \]
-
-" let g:lexima_enable_basic_rules = 1
-
-" inoremap <expr> <Plug>LeximaCR lexima#expand('<LT>CR>', 'i')
+" \  'coc-eslint',
 
 let g:UltiSnipsExpandTrigger = "<c-u>"
 let g:UltiSnipsJumpForwardTrigger = "<c-j>"
@@ -204,7 +204,6 @@ augroup vimrcEx
   autocmd BufNewFile,BufRead .env let b:coc_diagnostic_disable=1
 augroup END
 
-runtime macros/matchit.vim
 nnoremap <F5> :GundoToggle<CR>
 noremap <C-s> <esc>:w<cr>
 vmap <Enter> <Plug>(EasyAlign)
@@ -221,7 +220,7 @@ nnoremap <leader>gp :Gpush<cr>
 nnoremap <leader>gc :Gcommit -v<cr>
 nnoremap <leader>gc :tab :Git commit -v<cr>
 nnoremap <leader>gq :silent! !git add -A<cr>:tab :Git commit -v<cr>
-nnoremap <leader>gb :Gblame<cr>
+nnoremap <leader>gb :Git blame<cr>
 nnoremap <leader>gf :GBrowse<cr>
 
 " System clipboard mappings
@@ -229,25 +228,7 @@ vmap <Leader>y "+y
 nnoremap <Leader>p "+p
 nnoremap <Leader>P "+P
 " Make middle click copy work as expected
-vmap <LeftRelease> "*ygv
-
-" Hack to get rid of DOS line endings in Sway
-" https://github.com/neovim/neovim/issues/10223#issuecomment-676721570
-if exists('$WAYLAND_DISPLAY')
-  " clipboard on wayland with newline fix
-  let g:clipboard = {
-        \   'name': 'WL-Clipboard with ^M Trim',
-        \   'copy': {
-        \      '+': 'wl-copy --foreground --type text/plain',
-        \      '*': 'wl-copy --foreground --type text/plain --primary',
-        \    },
-        \   'paste': {
-        \      '+': {-> systemlist('wl-paste --no-newline | sed -e "s/\r$//"', '', 1)},
-        \      '*': {-> systemlist('wl-paste --no-newline --primary | sed -e "s/\r$//"', '', 1)},
-        \   },
-        \   'cache_enabled': 1,
-        \ }
-endif
+" vmap <LeftRelease> "*ygv
 
 " test mappings
 nnoremap <Leader>t :TestFile<CR>
@@ -259,7 +240,7 @@ let test#strategy = 'dispatch'
 " Don't try to guess test file
 let g:test#no_alternate = 1
 
-let test#custom_runners = {'Ruby': ['wadecorator']}
+let test#custom_runners = {'Ruby': ['rails_decorators']}
 
 " Typescript support
 let g:test#javascript#mocha#file_pattern = '\v.\.test\.(ts|js|tsx|jsx)$'
@@ -275,7 +256,7 @@ nnoremap : ;
 vnoremap ; :
 vnoremap : ;
 
-nnoremap <silent> <C-p> :Files<CR>
+nnoremap <silent> <C-p> :Telescope find_files<CR>
 
 " bind K to grep word under cursor
 nnoremap K :Ack! "\b<C-R><C-W>\b"<CR>:cw<CR>
@@ -283,15 +264,13 @@ nnoremap K :Ack! "\b<C-R><C-W>\b"<CR>:cw<CR>
 " Shortcut for restarting invoker server
 command! OR split | terminal oxidux restart
 
-" Open corresponding file in SF and diff it
-command! SFdiff vs ../sellect_frontend/% | windo diffthis
-
 command! MN tabe my-notes.md
 
 " Ask which tag to jump to when there is more than one match
 " nnoremap <C-]> g<C-]>
 
 set cursorline
+set termguicolors
 set background=dark
 
 colorscheme gruvbox
@@ -306,21 +285,42 @@ let g:localvimrc_persistent=1
 
 set signcolumn=yes
 set cmdheight=2
-let g:airline#extensions#ale#enabled = 1
-let g:ale_linters = {
-\   'php': ['hack', 'langserver', 'php', 'phpmd', 'phpstan'],
-\   'javascript': ['standard'],
-\   'typescript': [],
-\}
 
 " Auto-format rust code after save
 let g:rustfmt_autosave = 1
-let g:rustfmt_fail_silently = 1 " Don't display errors, ALE handles that
+let g:rustfmt_fail_silently = 1 " Don't display errors, coc handles that
 
 " Use 2 spaces instead of 4 for indenting multiline list items
 let g:vim_markdown_new_list_item_indent = 2
+
+let g:matchup_matchparen_offscreen = {'method': 'popup'}
 
 syntax on
 filetype on
 filetype plugin        on
 filetype indent        on
+
+lua <<EOF
+require 'nvim-treesitter.configs'.setup {
+  ensure_installed = "maintained",
+  highlight = {
+    enable = true,
+  },
+  matchup = {
+    enable = true,
+  },
+}
+
+require 'telescope.init'.setup {
+  defaults = {
+    mappings = {
+      i = {
+        ["<C-p>"] = require('telescope.actions').cycle_history_prev,
+        ["<C-n>"] = require('telescope.actions').cycle_history_next,
+        ["<C-k>"] = require('telescope.actions').move_selection_previous,
+        ["<C-j>"] = require('telescope.actions').move_selection_next,
+      },
+    }
+  }
+}
+EOF

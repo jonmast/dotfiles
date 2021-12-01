@@ -6,7 +6,7 @@ if [ -f "$local_hook" ]; then
   . "$local_hook"
 fi
 
-repo_hook='./hooks/pre-commit'
-if [ -f "$repo_hook" ]; then
-  . "$repo_hook"
-fi
+# repo_hook='./hooks/pre-commit'
+# if [ -f "$repo_hook" ]; then
+#   . "$repo_hook"
+# fi

@@ -7,7 +7,6 @@ endif
 filetype off
 
 call plug#begin('~/.config/nvim/plugged')
-Plug 'tpope/vim-obsession'
 Plug 'tpope/vim-rails'
 Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-abolish'
@@ -24,10 +23,9 @@ Plug 'tpope/vim-unimpaired'
 Plug 'junegunn/vim-easy-align'
 Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
-Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
-Plug 'junegunn/fzf.vim'
 Plug 'tpope/vim-commentary'
-Plug 'morhetz/gruvbox'
+Plug 'rktjmp/lush.nvim'
+Plug 'ellisonleao/gruvbox.nvim'
 Plug 'lifepillar/vim-solarized8'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'sjl/gundo.vim'
@@ -49,8 +47,11 @@ Plug 'nathanaelkane/vim-indent-guides'
 Plug 'tpope/vim-endwise'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'jackguo380/vim-lsp-cxx-highlight'
-Plug 'haginaga/vim-compiler-phpunit'
-Plug 'pantharshit00/vim-prisma'
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+Plug 'nvim-lua/plenary.nvim'
+Plug 'nvim-telescope/telescope.nvim'
+Plug 'kyazdani42/nvim-web-devicons'
+Plug 'andymass/vim-matchup'
 if has('python3')
     Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
     Plug 'vim-vdebug/vdebug'

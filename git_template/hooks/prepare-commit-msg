@@ -8,6 +8,12 @@
 if [ "$2" = "merge" ] || [ "$2" = "commit" ]; then
     exit
 fi
+
+# If the commit message is not empty for any reason, bail
+if head -1 "$1" | grep -ve '^$' > /dev/null; then
+  exit
+fi
+
 ISSUE_KEY=$(git branch | grep -o "\* \(.*/\)*[A-Z]\{2,\}-[0-9]\+" | grep -o "[A-Z]\{2,\}-[0-9]\+")
 if [ $? -ne 0 ]; then
     # no issue key in branch, use the default message

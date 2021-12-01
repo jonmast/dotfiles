@@ -5,6 +5,7 @@
 Session.vim
 .netrwhist
 .lvimrc
+.vim
 
 # RubyMine
 .idea/

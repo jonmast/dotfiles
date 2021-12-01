@@ -51,11 +51,10 @@
             "command": "ruby -r erb -e 'puts ERB.new($stdin.read.gsub(%{<%=},%{<%}), nil, %{-}).src< %t | ruby -c"
         },
         "rubocop": {
-            "command": "bundle",
+            // Custom command that selects between bundle exec and raw invocation
+            "command": "coporub",
             "rootPatterns": ["Gemfile"],
             "args": [
-                "exec",
-                "rubocop",
                 "--format",
                 "json",
                 "--stdin",
