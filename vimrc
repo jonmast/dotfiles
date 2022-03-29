@@ -123,6 +123,9 @@ nmap <silent> gr <Plug>(coc-references)
 " autofix
 nmap <leader>qf <Plug>(coc-fix-current)
 
+nmap <leader>ca <Plug>(coc-codeaction-cursor)
+vmap <leader>ca <Plug>(coc-codeaction-selected)
+
 " Map function and class text objects
 xmap if <Plug>(coc-funcobj-i)
 omap if <Plug>(coc-funcobj-i)
@@ -158,6 +161,8 @@ let g:UltiSnipsExpandTrigger = "<c-u>"
 let g:UltiSnipsJumpForwardTrigger = "<c-j>"
 let g:UltiSnipsJumpBackwardTrigger = "<c-k>"
 let g:UltiSnipsRemoveSelectModeMappings = 0
+
+let g:gundo_prefer_python3 = 1
 
 augroup vimrcEx
   autocmd!
@@ -195,8 +200,8 @@ augroup vimrcEx
   autocmd BufNewFile,BufRead *.env set filetype=sh.env
 
   " Folds
-  autocmd Syntax haml setlocal foldmethod=indent
-  autocmd Syntax haml normal zR
+  " autocmd Syntax haml setlocal foldmethod=indent
+  " autocmd Syntax haml normal zR
 
   autocmd FileType php setlocal commentstring=//%s
 
@@ -228,7 +233,7 @@ vmap <Leader>y "+y
 nnoremap <Leader>p "+p
 nnoremap <Leader>P "+P
 " Make middle click copy work as expected
-" vmap <LeftRelease> "*ygv
+vmap <LeftRelease> "*ygv
 
 " test mappings
 nnoremap <Leader>t :TestFile<CR>
@@ -249,6 +254,13 @@ let test#javascript#mocha#executable='npm test -- '
 let g:dispatch_compilers = { 'bin/spinach': 'cucumber' }
 
 call camelcasemotion#CreateMotionMappings(',')
+
+let g:projectionist_heuristics = {
+  \ "package.json": {
+    \ "**/__tests__/*.ts": { "alternate": "{}.ts"},
+    \ "*.ts": { "alternate": "{dirname}/__tests__/{basename}.ts"}
+    \ }
+\ }
 
 " reverse semicolon and colon
 nnoremap ; :
@@ -295,10 +307,10 @@ let g:vim_markdown_new_list_item_indent = 2
 
 let g:matchup_matchparen_offscreen = {'method': 'popup'}
 
-syntax on
 filetype on
 filetype plugin        on
 filetype indent        on
+syntax on
 
 lua <<EOF
 require 'nvim-treesitter.configs'.setup {
@@ -311,8 +323,12 @@ require 'nvim-treesitter.configs'.setup {
   },
 }
 
+require('telescope').load_extension('coc')
+require('telescope').load_extension('frecency')
+
 require 'telescope.init'.setup {
   defaults = {
+    file_sorter = require('frecency_sorter').frecency_sorter,
     mappings = {
       i = {
         ["<C-p>"] = require('telescope.actions').cycle_history_prev,
@@ -321,6 +337,13 @@ require 'telescope.init'.setup {
         ["<C-j>"] = require('telescope.actions').move_selection_next,
       },
     }
+  },
+  extensions = {
+    frecency = {
+      default_workspace = ':CWD:'
+    }
   }
 }
+
+-- require('telescope').load_extension('fzf')
 EOF

@@ -23,6 +23,7 @@
 	cmd = nvim -f -c \"Gdiff\" \"$MERGED\"
 [diff]
 	wsErrorHighlight = all
+	colormoved = default
 [log]
 	date = local
 [diff "image"]

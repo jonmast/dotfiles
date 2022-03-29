@@ -9,21 +9,18 @@
             }
         },
         "haskell": {
-            "command": "hie-wrapper",
+            "command": "haskell-language-server-wrapper",
             "rootPatterns": [
                 ".stack.yaml",
                 "cabal.config",
                 "package.yaml"
             ],
+            "args": ["--lsp"],
             "filetypes": [
                 "hs",
                 "lhs",
                 "haskell"
-            ],
-            "initializationOptions": {
-                "languageServerHaskell": {
-                }
-            }
+            ]
         },
         "elmLS": {
             "command": "elm-language-server",
@@ -34,7 +31,7 @@
     "solargraph.diagnostics": false,
     "suggest.enablePreview": true,
     "coc.source.ultisnips.priority": 1,
-    "coc.preferences.formatOnSaveFiletypes": ["typescript", "rust", "elm", "c", "cpp", "html", "go"],
+    "coc.preferences.formatOnSaveFiletypes": ["typescript", "rust", "elm", "c", "cpp", "html", "go", "haskell"],
     "coc.preferences.currentFunctionSymbolAutoUpdate": true,
     "tslint.autoFixOnSave": true,
     "tsserver.formatOnType": false,
@@ -136,5 +133,6 @@
     "yaml.schemaStore.enable": true,
     "yaml.schemas": {
         "https://kubernetesjsonschema.dev/v1.16.0/all.json": ["*-deployment.yaml", "k8s/*.yaml"]
-    }
+    },
+    "Lua.telemetry.enable": true
 }

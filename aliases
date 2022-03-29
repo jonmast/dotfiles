@@ -17,22 +17,20 @@ alias gc='git checkout'
 alias gra='git remote add'
 alias grr='git remote rm'
 alias gcl='git clone'
-alias gfom='git fetch origin master:master'
+alias gfom='if git rev-parse --verify main &> /dev/null; then git fetch origin main:main; else git fetch origin master:master; fi'
 alias gfod='git fetch origin develop:develop'
 alias gci='git commit -v'
 alias gcd='echo "WARN: use git switch instead\n"; git checkout develop'
 alias gcm='echo "WARN: use git switch instead\n"; git checkout master'
 alias gswd='git switch develop'
-alias gswm='git switch master'
+alias gswm='if git rev-parse --verify main &> /dev/null; then git switch main; else git switch master; fi'
 alias gpb='git publish'
-alias gflpb='git flow publish'
 alias gmg='git merge'
 alias gmg-='git merge -'
 alias gsw='git switch'
 unalias gp
 
 alias py='python'
-alias mm=middleman
 
 alias v=nvim
 alias vi=nvim

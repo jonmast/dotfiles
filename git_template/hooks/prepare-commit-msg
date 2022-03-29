@@ -21,7 +21,7 @@ if [ $? -ne 0 ]; then
 fi
 # issue key matched from branch prefix, prepend to commit message
 TEMP=$(mktemp /tmp/commitmsg-XXXXX)
-(echo "$ISSUE_KEY $(cat  "$1")") > "$TEMP"
+(printf '\n\n%s\n%s' "$ISSUE_KEY" "$(cat  "$1")") > "$TEMP"
 cat "$TEMP" > "$1"
 
 local_hook="$HOME"/.git_template.local/hooks/prepare-commit-msg
