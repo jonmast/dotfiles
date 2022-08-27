@@ -8,7 +8,7 @@ export HOMEBREW_CASK_OPTS="--no-quarantine"
 export FZF_DEFAULT_COMMAND='rg --files'
 
 # load custom completions
-fpath=(~/.zsh $fpath)
+fpath=(~/.zsh ~/.asdf/completions $fpath)
 
 # Load antigen
 source ~/.dotfiles/antigen/antigen.zsh
@@ -30,7 +30,6 @@ antigen apply
 autoload -Uz compinit
 compinit
 [[ -a $HOME/.asdf/asdf.sh ]] && source $HOME/.asdf/asdf.sh
-[[ -a $HOME/.asdf/completions/asdf.bash ]] && source $HOME/.asdf/completions/asdf.bash
 
 compdef g=git
 compdef mycli=mysql
