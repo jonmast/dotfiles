@@ -18,7 +18,7 @@ antigen use oh-my-zsh
 antigen bundle git
 antigen bundle history-substring-search
 antigen bundle vi-mode
-antigen bundle zdharma/fast-syntax-highlighting
+antigen bundle zdharma-continuum/fast-syntax-highlighting
 antigen bundle archlinux
 antigen bundle rails
 antigen bundle djui/alias-tips

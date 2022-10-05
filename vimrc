@@ -88,7 +88,7 @@ endif
 set shortmess+=c
 
 inoremap <silent><expr> <TAB>
-      \ pumvisible() ? "\<C-n>" :
+      \ coc#pum#visible() ? coc#pum#next(1):
       \ <SID>check_back_space() ? "\<TAB>" :
       \ coc#refresh()
 inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
@@ -100,12 +100,13 @@ endfunction
 
 nnoremap <silent> gh :call CocActionAsync('doHover')<CR>
 inoremap <silent><expr> <c-space> coc#refresh()
-" inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
-"                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+
+inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
+                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 
 let g:endwise_no_mappings = 1
-inoremap <silent><expr> <cr> pumvisible() ? "\<C-y>\<c-r>=EndwiseDiscretionary()\<CR>" 
-                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>\<c-r>=EndwiseDiscretionary()\<CR>"
+" inoremap <silent><expr> <cr> coc#pum#visible() ? "\<c-r>=coc#pum#confirm()\<CR>\<c-r>=EndwiseDiscretionary()\<CR>" 
+"                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>\<c-r>=EndwiseDiscretionary()\<CR>"
 
 
 " Use `[g` and `]g` to navigate diagnostics
@@ -152,7 +153,6 @@ let g:coc_global_extensions = [
 \  'coc-python',
 \  'coc-diagnostic',
 \  'coc-stylelint',
-\  'coc-pairs',
 \  'coc-prettier'
 \]
 " \  'coc-eslint',
@@ -207,6 +207,12 @@ augroup vimrcEx
 
   " Turn off annoying shellcheck for dotenv files
   autocmd BufNewFile,BufRead .env let b:coc_diagnostic_disable=1
+
+  " Disable custom formatexpr from TS plugin which breaks gq
+  " https://github.com/HerringtonDarkholme/yats.vim/issues/218#issuecomment-1092187718
+  autocmd FileType typescript setlocal formatexpr=
+
+  autocmd BufWritePost *.prisma call CocActionAsync('format')
 augroup END
 
 nnoremap <F5> :GundoToggle<CR>
@@ -281,6 +287,17 @@ command! MN tabe my-notes.md
 " Ask which tag to jump to when there is more than one match
 " nnoremap <C-]> g<C-]>
 
+" nvim-dap keybinds
+nnoremap <silent> <F5> <Cmd>lua require'dap'.continue()<CR>
+nnoremap <silent> <F10> <Cmd>lua require'dap'.step_over()<CR>
+nnoremap <silent> <F11> <Cmd>lua require'dap'.step_into()<CR>
+nnoremap <silent> <F12> <Cmd>lua require'dap'.step_out()<CR>
+nnoremap <silent> <Leader>b <Cmd>lua require'dap'.toggle_breakpoint()<CR>
+nnoremap <silent> <Leader>B <Cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<CR>
+nnoremap <silent> <Leader>lp <Cmd>lua require'dap'.set_breakpoint(nil, nil, vim.fn.input('Log point message: '))<CR>
+nnoremap <silent> <Leader>dr <Cmd>lua require'dap'.repl.open()<CR>
+nnoremap <silent> <Leader>dl <Cmd>lua require'dap'.run_last()<CR>
+
 set cursorline
 set termguicolors
 set background=dark
@@ -313,14 +330,62 @@ filetype indent        on
 syntax on
 
 lua <<EOF
-require 'nvim-treesitter.configs'.setup {
-  ensure_installed = "maintained",
-  highlight = {
-    enable = true,
+
+local dap = require('dap')
+
+dap.adapters.lldb = {
+  type = 'executable',
+  command = '/usr/bin/lldb-vscode',
+  name = 'lldb',
+}
+
+dap.configurations.cpp = {
+  {
+    name = 'Treesitter',
+    type = 'lldb',
+    request = 'launch',
+    program = '/usr/bin/tree-sitter',
+    cwd = '${workspaceFolder}',
+    stopOnEntry = false,
+    args = {'test'},
   },
+  {
+    name = 'Launch',
+    type = 'lldb',
+    request = 'launch',
+    program = function()
+      return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+    end,
+    cwd = '${workspaceFolder}',
+    stopOnEntry = false,
+    args = {},
+  },
+}
+
+-- Use CPP config for Rust and C as well
+dap.configurations.c = dap.configurations.cpp
+dap.configurations.rust = dap.configurations.cpp
+
+require 'nvim-treesitter.configs'.setup {
+  -- ensure_installed = "all",
+  ignore_install = { "r", "godotResource", "scala" },
+  -- highlight = {
+  --   enable = true,
+  -- },
   matchup = {
     enable = true,
   },
+  playground = {
+    enable = true,
+  }
+}
+
+local parser_config = require 'nvim-treesitter.parsers'.get_parser_configs()
+parser_config.scala = {
+  install_info = {
+    url = "~/dev/scala/tree-sitter-scala",
+    files = {"src/parser.c"}
+  }
 }
 
 require('telescope').load_extension('coc')
@@ -340,10 +405,10 @@ require 'telescope.init'.setup {
   },
   extensions = {
     frecency = {
-      default_workspace = ':CWD:'
+      auto_validate = false
     }
   }
 }
 
--- require('telescope').load_extension('fzf')
+require("nvim-autopairs").setup {map_cr=false}
 EOF

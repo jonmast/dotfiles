@@ -29,9 +29,8 @@
         }
     },
     "solargraph.diagnostics": false,
-    "suggest.enablePreview": true,
     "coc.source.ultisnips.priority": 1,
-    "coc.preferences.formatOnSaveFiletypes": ["typescript", "rust", "elm", "c", "cpp", "html", "go", "haskell"],
+    "coc.preferences.formatOnSaveFiletypes": ["typescript", "typescriptreact", "rust", "elm", "c", "cpp", "html", "go", "haskell", "prisma"],
     "coc.preferences.currentFunctionSymbolAutoUpdate": true,
     "tslint.autoFixOnSave": true,
     "tsserver.formatOnType": false,
@@ -120,7 +119,6 @@
     ],
     "python.jediEnabled": false,
     "rust-analyzer.checkOnSave.command": "clippy",
-    "rust-analyzer.lens.run": false,
     "rust-analyzer.procMacro.enable": true,
     "diagnostic.virtualText": true,
     "diagnostic.virtualTextCurrentLineOnly": false,

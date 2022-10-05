@@ -74,6 +74,6 @@ alias bgrep="bundle list --paths | xargs rg"
 alias wgrep="bundle list --paths | rg "(workarea|weblinc)" | xargs rg"
 
 alias JSC="JS_DRIVER=chrome"
-alias gop='git open-pr'
+alias gop='gh pr create -w'
 
 alias tree='exa -T'

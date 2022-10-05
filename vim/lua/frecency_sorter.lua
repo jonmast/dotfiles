@@ -25,7 +25,7 @@ local function frecency_score(self, prompt, line, entry)
     local frecency = db_score(self, entry)
     -- print("Entry: " .. entry.value .. " FZF: " .. default_score .. " CSTM: " .. frecency)
 
-    return default_score / ((frecency + 1) * 0.5)
+    return default_score / ((frecency + 1) * 0.1)
   end
 
   return default_score

@@ -14,7 +14,6 @@ Plug 'tpope/vim-surround'
 Plug 'tpope/vim-bundler'
 Plug 'tpope/vim-fugitive', { 'tag': '*' }
 Plug 'tommcdo/vim-fugitive-blame-ext'
-Plug 'tommcdo/vim-fubitive'
 Plug 'tpope/vim-rhubarb'
 Plug 'tpope/vim-dispatch'
 Plug 'tpope/vim-repeat'
@@ -56,9 +55,11 @@ Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'nvim-telescope/telescope-frecency.nvim'
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'andymass/vim-matchup'
+Plug 'mfussenegger/nvim-dap'
+Plug 'windwp/nvim-autopairs'
+Plug 'pantharshit00/vim-prisma'
 if has('python3')
     Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
-    Plug 'vim-vdebug/vdebug'
 endif
 call plug#end()
 filetype on
