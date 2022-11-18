@@ -58,6 +58,7 @@ Plug 'andymass/vim-matchup'
 Plug 'mfussenegger/nvim-dap'
 Plug 'windwp/nvim-autopairs'
 Plug 'pantharshit00/vim-prisma'
+Plug 'github/copilot.vim', {'branch': 'release'}
 if has('python3')
     Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
 endif
