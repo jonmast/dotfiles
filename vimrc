@@ -212,7 +212,7 @@ augroup vimrcEx
   " https://github.com/HerringtonDarkholme/yats.vim/issues/218#issuecomment-1092187718
   autocmd FileType typescript setlocal formatexpr=
 
-  autocmd BufWritePost *.prisma call CocActionAsync('format')
+  autocmd BufWritePre *.prisma call CocActionAsync('format')
 augroup END
 
 nnoremap <F5> :GundoToggle<CR>
@@ -393,7 +393,7 @@ require('telescope').load_extension('frecency')
 
 require 'telescope.init'.setup {
   defaults = {
-    file_sorter = require('frecency_sorter').frecency_sorter,
+    -- file_sorter = require('frecency_sorter').frecency_sorter,
     mappings = {
       i = {
         ["<C-p>"] = require('telescope.actions').cycle_history_prev,
