@@ -153,9 +153,9 @@ let g:coc_global_extensions = [
 \  'coc-python',
 \  'coc-diagnostic',
 \  'coc-stylelint',
+\  'coc-eslint',
 \  'coc-prettier'
 \]
-" \  'coc-eslint',
 
 let g:UltiSnipsExpandTrigger = "<c-u>"
 let g:UltiSnipsJumpForwardTrigger = "<c-j>"
@@ -213,6 +213,8 @@ augroup vimrcEx
   autocmd FileType typescript setlocal formatexpr=
 
   autocmd BufWritePre *.prisma call CocActionAsync('format')
+
+  autocmd FileType yaml let b:copilot_enabled=v:true
 augroup END
 
 nnoremap <F5> :GundoToggle<CR>
@@ -231,7 +233,7 @@ nnoremap <leader>gp :Gpush<cr>
 nnoremap <leader>gc :Gcommit -v<cr>
 nnoremap <leader>gc :tab :Git commit -v<cr>
 nnoremap <leader>gq :silent! !git add -A<cr>:tab :Git commit -v<cr>
-nnoremap <leader>gb :Git blame<cr>
+nnoremap <leader>gb :Git blame -M -C<cr>
 nnoremap <leader>gf :GBrowse<cr>
 
 " System clipboard mappings
@@ -388,10 +390,8 @@ parser_config.scala = {
   }
 }
 
-require('telescope').load_extension('coc')
-require('telescope').load_extension('frecency')
 
-require 'telescope.init'.setup {
+require 'telescope'.setup {
   defaults = {
     -- file_sorter = require('frecency_sorter').frecency_sorter,
     mappings = {
@@ -409,6 +409,8 @@ require 'telescope.init'.setup {
     }
   }
 }
+
+require('telescope').load_extension('frecency')
 
 require("nvim-autopairs").setup {map_cr=false}
 EOF
