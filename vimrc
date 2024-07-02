@@ -164,6 +164,8 @@ let g:UltiSnipsRemoveSelectModeMappings = 0
 
 let g:gundo_prefer_python3 = 1
 
+let g:graphql_javascript_tags=['gql', 'graphql', '\/\* \?GraphQL \?\*\/ \?']
+
 augroup vimrcEx
   autocmd!
 
@@ -413,4 +415,6 @@ require 'telescope'.setup {
 require('telescope').load_extension('frecency')
 
 require("nvim-autopairs").setup {map_cr=false}
+require("oil").setup()
+vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
 EOF
