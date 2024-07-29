@@ -23,7 +23,7 @@
   "solargraph.diagnostics": false,
   "coc.source.ultisnips.priority": 1,
   // "coc.preferences.formatOnSaveFiletypes": ["typescript", "typescriptreact", "rust", "elm", "c", "cpp", "html", "go", "haskell", "prisma"],
-  "[typescript][typescriptreact][rust][c][json]": {
+  "[typescript][typescriptreact][rust][c][json][prisma]": {
     "coc.preferences.formatOnSave": true
   },
   "coc.preferences.currentFunctionSymbolAutoUpdate": true,

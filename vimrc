@@ -154,7 +154,8 @@ let g:coc_global_extensions = [
 \  'coc-diagnostic',
 \  'coc-stylelint',
 \  'coc-eslint',
-\  'coc-prettier'
+\  'coc-prettier-dev',
+\  'coc-prisma'
 \]
 
 let g:UltiSnipsExpandTrigger = "<c-u>"
@@ -214,7 +215,7 @@ augroup vimrcEx
   " https://github.com/HerringtonDarkholme/yats.vim/issues/218#issuecomment-1092187718
   autocmd FileType typescript setlocal formatexpr=
 
-  autocmd BufWritePre *.prisma call CocActionAsync('format')
+  " autocmd BufWritePre *.prisma call CocActionAsync('format')
 
   autocmd FileType yaml let b:copilot_enabled=v:true
 augroup END
