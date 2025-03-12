@@ -1,9 +1,5 @@
 set rtp^=/usr/share/vim/vimfiles/
 
-" testing coc extensions
-" set rtp^=~/dev/coc-dev/coc-rust-analyzer
-" let g:coc_node_args = ['--nolazy', '--inspect-brk=6045']
-
 set hlsearch           " highlight searches
 set incsearch          " do incremental searching
 set showmatch          " jump to matching brackets
@@ -20,7 +16,6 @@ set wrap               "dont wrap lines
 set linebreak          "wrap lines at convenient points
 set number
 set relativenumber
-set guitablabel=%t
 set ts=2               " Tabs are 2 spaces
 set bs=indent,eol,start
 set shiftwidth=2       " Tabs under smart indent
@@ -87,91 +82,10 @@ endif
 
 set shortmess+=c
 
-inoremap <silent><expr> <TAB>
-      \ coc#pum#visible() ? coc#pum#next(1):
-      \ <SID>check_back_space() ? "\<TAB>" :
-      \ coc#refresh()
-inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
-
-function! s:check_back_space() abort
-  let col = col('.') - 1
-  return !col || getline('.')[col - 1]  =~# '\s'
-endfunction
-
-nnoremap <silent> gh :call CocActionAsync('doHover')<CR>
-inoremap <silent><expr> <c-space> coc#refresh()
-
-inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
-                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
-
-let g:endwise_no_mappings = 1
-" inoremap <silent><expr> <cr> coc#pum#visible() ? "\<c-r>=coc#pum#confirm()\<CR>\<c-r>=EndwiseDiscretionary()\<CR>" 
-"                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>\<c-r>=EndwiseDiscretionary()\<CR>"
-
-
-" Use `[g` and `]g` to navigate diagnostics
-nmap <silent> [g <Plug>(coc-diagnostic-prev)
-nmap <silent> ]g <Plug>(coc-diagnostic-next)
-
-nmap <leader>rn <Plug>(coc-rename)
-
-" GoTo code navigation.
-nmap <silent> gd <Plug>(coc-definition)
-nmap <silent> gy <Plug>(coc-type-definition)
-nmap <silent> gi <Plug>(coc-implementation)
-nmap <silent> gr <Plug>(coc-references)
-
-" autofix
-nmap <leader>qf <Plug>(coc-fix-current)
-
-nmap <leader>ca <Plug>(coc-codeaction-cursor)
-vmap <leader>ca <Plug>(coc-codeaction-selected)
-
-" Map function and class text objects
-xmap if <Plug>(coc-funcobj-i)
-omap if <Plug>(coc-funcobj-i)
-xmap af <Plug>(coc-funcobj-a)
-omap af <Plug>(coc-funcobj-a)
-xmap ic <Plug>(coc-classobj-i)
-omap ic <Plug>(coc-classobj-i)
-xmap ac <Plug>(coc-classobj-a)
-omap ac <Plug>(coc-classobj-a)
-
-let g:coc_global_extensions = [
-\  'coc-rust-analyzer',
-\  'coc-css',
-\  'coc-dictionary',
-\  'coc-json',
-\  'coc-solargraph',
-\  'coc-syntax',
-\  'coc-tsserver',
-\  'coc-tslint-plugin',
-\  'coc-vetur',
-\  'coc-ultisnips',
-\  'coc-vimlsp',
-\  'coc-git',
-\  'coc-python',
-\  'coc-diagnostic',
-\  'coc-stylelint',
-\  'coc-eslint',
-\  'coc-prettier-dev',
-\  'coc-prisma'
-\]
-
-let g:UltiSnipsExpandTrigger = "<c-u>"
-let g:UltiSnipsJumpForwardTrigger = "<c-j>"
-let g:UltiSnipsJumpBackwardTrigger = "<c-k>"
-let g:UltiSnipsRemoveSelectModeMappings = 0
-
-let g:gundo_prefer_python3 = 1
-
 let g:graphql_javascript_tags=['gql', 'graphql', '\/\* \?GraphQL \?\*\/ \?']
 
 augroup vimrcEx
   autocmd!
-
-  " For HTML
-  autocmd FileType html set omnifunc=htmlcomplete#CompleteTags
 
   autocmd VimResized * :silent! wincmd =
   " When editing a file, always jump to the last known cursor position.
@@ -187,12 +101,6 @@ augroup vimrcEx
   autocmd FileType gitcommit setlocal spell
   " Allow stylesheets to autocomplete hyphenated words
   autocmd FileType css,scss,sass setlocal iskeyword+=-
-  " Question marks are valid in ruby metods
-  " The question mark causes issues with tag jumping in vim-ruby, disabling
-  " for now
-  " autocmd FileType ruby,eruby setlocal iskeyword+=?
-
-  autocmd FileType go setlocal nolist
 
   autocmd BufReadPost quickfix map <buffer> <MiddleMouse> gx
   autocmd BufReadPost quickfix map <buffer> gX /tmp\/screenshot<CR>gx
@@ -202,32 +110,21 @@ augroup vimrcEx
 
   autocmd BufNewFile,BufRead *.env set filetype=sh.env
 
-  " Folds
-  " autocmd Syntax haml setlocal foldmethod=indent
-  " autocmd Syntax haml normal zR
-
-  autocmd FileType php setlocal commentstring=//%s
-
-  " Turn off annoying shellcheck for dotenv files
-  autocmd BufNewFile,BufRead .env let b:coc_diagnostic_disable=1
-
   " Disable custom formatexpr from TS plugin which breaks gq
   " https://github.com/HerringtonDarkholme/yats.vim/issues/218#issuecomment-1092187718
   autocmd FileType typescript setlocal formatexpr=
 
-  " autocmd BufWritePre *.prisma call CocActionAsync('format')
-
   autocmd FileType yaml let b:copilot_enabled=v:true
 augroup END
 
-nnoremap <F5> :GundoToggle<CR>
-noremap <C-s> <esc>:w<cr>
-vmap <Enter> <Plug>(EasyAlign)
+nnoremap <F5> :UndotreeToggle<CR>
 
 nnoremap <Leader>e :e <C-R>=expand("%:p:h") . "/" <CR>
-nnoremap <Leader>h :nohl<CR>
-nnoremap <Leader>v :tabe ~/.vimrc<CR>
-nnoremap <Leader>w :w<CR>
+nnoremap <silent> <Leader>h :nohl<CR>
+nnoremap <Leader>vv :tabe ~/.vimrc<CR>
+nnoremap <Leader>vl :tabe ~/.dotfiles/vim/lua/jonmast.lua<CR>
+nnoremap <silent> <Leader>w :w<CR>
+nnoremap <silent> <Leader>ii :TSToolsAddMissingImports<CR>
 
 "Git shortcuts
 nnoremap <leader>gs :Git<cr>
@@ -238,6 +135,7 @@ nnoremap <leader>gc :tab :Git commit -v<cr>
 nnoremap <leader>gq :silent! !git add -A<cr>:tab :Git commit -v<cr>
 nnoremap <leader>gb :Git blame -M -C<cr>
 nnoremap <leader>gf :GBrowse<cr>
+vnoremap <leader>gf :GBrowse<cr>
 
 " System clipboard mappings
 vmap <Leader>y "+y
@@ -257,12 +155,6 @@ let test#strategy = 'dispatch'
 let g:test#no_alternate = 1
 
 let test#custom_runners = {'Ruby': ['rails_decorators']}
-
-" Typescript support
-let g:test#javascript#mocha#file_pattern = '\v.\.test\.(ts|js|tsx|jsx)$'
-let test#javascript#mocha#executable='npm test -- '
-
-let g:dispatch_compilers = { 'bin/spinach': 'cucumber' }
 
 call camelcasemotion#CreateMotionMappings(',')
 
@@ -284,13 +176,7 @@ nnoremap <silent> <C-p> :Telescope find_files<CR>
 " bind K to grep word under cursor
 nnoremap K :Ack! "\b<C-R><C-W>\b"<CR>:cw<CR>
 
-" Shortcut for restarting invoker server
-command! OR split | terminal oxidux restart
-
 command! MN tabe my-notes.md
-
-" Ask which tag to jump to when there is more than one match
-" nnoremap <C-]> g<C-]>
 
 " nvim-dap keybinds
 nnoremap <silent> <F5> <Cmd>lua require'dap'.continue()<CR>
@@ -320,10 +206,6 @@ let g:localvimrc_persistent=1
 set signcolumn=yes
 set cmdheight=2
 
-" Auto-format rust code after save
-let g:rustfmt_autosave = 1
-let g:rustfmt_fail_silently = 1 " Don't display errors, coc handles that
-
 " Use 2 spaces instead of 4 for indenting multiline list items
 let g:vim_markdown_new_list_item_indent = 2
 
@@ -335,87 +217,5 @@ filetype indent        on
 syntax on
 
 lua <<EOF
-
-local dap = require('dap')
-
-dap.adapters.lldb = {
-  type = 'executable',
-  command = '/usr/bin/lldb-vscode',
-  name = 'lldb',
-}
-
-dap.configurations.cpp = {
-  {
-    name = 'Treesitter',
-    type = 'lldb',
-    request = 'launch',
-    program = '/usr/bin/tree-sitter',
-    cwd = '${workspaceFolder}',
-    stopOnEntry = false,
-    args = {'test'},
-  },
-  {
-    name = 'Launch',
-    type = 'lldb',
-    request = 'launch',
-    program = function()
-      return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
-    end,
-    cwd = '${workspaceFolder}',
-    stopOnEntry = false,
-    args = {},
-  },
-}
-
--- Use CPP config for Rust and C as well
-dap.configurations.c = dap.configurations.cpp
-dap.configurations.rust = dap.configurations.cpp
-
-require 'nvim-treesitter.configs'.setup {
-  -- ensure_installed = "all",
-  ignore_install = { "r", "godotResource", "scala" },
-  -- highlight = {
-  --   enable = true,
-  -- },
-  matchup = {
-    enable = true,
-  },
-  playground = {
-    enable = true,
-  }
-}
-
-local parser_config = require 'nvim-treesitter.parsers'.get_parser_configs()
-parser_config.scala = {
-  install_info = {
-    url = "~/dev/scala/tree-sitter-scala",
-    files = {"src/parser.c"}
-  }
-}
-
-
-require 'telescope'.setup {
-  defaults = {
-    -- file_sorter = require('frecency_sorter').frecency_sorter,
-    mappings = {
-      i = {
-        ["<C-p>"] = require('telescope.actions').cycle_history_prev,
-        ["<C-n>"] = require('telescope.actions').cycle_history_next,
-        ["<C-k>"] = require('telescope.actions').move_selection_previous,
-        ["<C-j>"] = require('telescope.actions').move_selection_next,
-      },
-    }
-  },
-  extensions = {
-    frecency = {
-      auto_validate = false
-    }
-  }
-}
-
-require('telescope').load_extension('frecency')
-
-require("nvim-autopairs").setup {map_cr=false}
-require("oil").setup()
-vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
+require('jonmast')
 EOF
