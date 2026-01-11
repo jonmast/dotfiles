@@ -1,11 +1,11 @@
 [user]
 	email = jon@jonmast.com
 	name = Jonathan Mast
-	signingkey = 61BD854CBFF15EE6
 [push]
 	default = simple
 [core]
 	excludesfile = ~/.gitignore_global
+	trustctime = false
 [alias]
 	unstage = reset HEAD --
   ctags = "!sh -c '[ -f .git/hooks/ctags ] || git init; .git/hooks/ctags' git-ctags"
@@ -15,6 +15,7 @@
 	date = relative
 [init]
 	templatedir = ~/.git_template
+	defaultBranch = main
 [merge]
 	tool = fugitive
 [mergetool]
@@ -34,7 +35,7 @@
 	process = git-lfs filter-process
 	required = true
 [commit]
-	gpgsign = true
+	gpgsign = false
 
 [include]
 	path = ~/.gitconfig.local
@@ -49,3 +50,9 @@
 
 [includeIf "gitdir:~/projects/"]
 	path = ~/projects/.gitconfig
+[rerere]
+	enabled = true
+[gpg]
+	format = ssh
+[maintenance]
+	repo = /Users/jon/projects/vtex/ethel

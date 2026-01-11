@@ -3,7 +3,7 @@ font:
   offset:
     y: -6
   normal:
-    family: "Noto Sans Mono"
+    family: "NotoMono Nerd Font"
 
 # Base16 Gruvbox dark, hard - alacritty color config
 # https://github.com/aaron-williamson/base16-alacritty/blob/master/colors/base16-gruvbox-dark-hard.yml

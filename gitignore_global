@@ -45,3 +45,8 @@ my-notes.md
 .tool-versions
 .generators
 .rakeTasks
+
+codecompanion.workspace.json
+AGENTS.md
+yarn-error.log
+.spec-workflow
