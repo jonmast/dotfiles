@@ -38,7 +38,7 @@ alias vim=nvim
 
 alias ya=yaourt
 
-alias dc=docker-compose
+alias dc='docker compose'
 alias rl='less +G log/development.log'
 alias buc='bundle update --conservative'
 alias j=z
@@ -55,18 +55,18 @@ alias bu="bundle update"
 alias bi="bundle install"
 alias bcn="bundle clean"
 
-if type exa &> /dev/null; then
-  alias ls="exa"
+if type eza &> /dev/null; then
+  alias ls="eza"
 fi
 
-if type /usr/local/bin/grm &> /dev/null; then
-  alias rm="/usr/local/bin/grm"
+if type /opt/homebrew/bin/grm &> /dev/null; then
+  alias rm="/opt/homebrew/bin/grm"
 fi
 
 alias rg="rg --max-columns=1000 --max-columns-preview --smart-case --type-add='haml:*.haml' --type-add='coffee:*.coffee' --type-add='ruby:*.decorator'"
 
 alias or='oxidux restart'
-alias oc='oxidux connect'
+alias oc='opencode'
 alias os='oxidux stop'
 alias bor='bundle && oxidux restart'
 
@@ -76,4 +76,5 @@ alias wgrep="bundle list --paths | rg "(workarea|weblinc)" | xargs rg"
 alias JSC="JS_DRIVER=chrome"
 alias gop='gh pr create -w'
 
-alias tree='exa -T'
+alias tree='eza -T'
+alias claude="/Users/jon/.claude/local/claude"
