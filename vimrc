@@ -76,9 +76,9 @@ if executable('rg')
   let g:ackprg = 'rg --vimgrep --no-heading'
 endif
 
-if filereadable(expand('~/.vim_bundles'))
-  source ~/.vim_bundles
-endif
+" if filereadable(expand('~/.vim_bundles'))
+"   source ~/.vim_bundles
+" endif
 
 set shortmess+=c
 
@@ -122,8 +122,8 @@ nnoremap <F5> :UndotreeToggle<CR>
 nnoremap <Leader>e :e <C-R>=expand("%:p:h") . "/" <CR>
 nnoremap <silent> <Leader>h :nohl<CR>
 nnoremap <Leader>vv :tabe ~/.vimrc<CR>
-nnoremap <Leader>vl :tabe ~/.dotfiles/vim/lua/jonmast.lua<CR>
-nnoremap <silent> <Leader>w :w<CR>
+nnoremap <Leader>vl :tabe ~/.config/nvim/lua/plugins/<CR>
+nnoremap <silent> <Leader>w :silent w<CR>
 nnoremap <silent> <Leader>ii :TSToolsAddMissingImports<CR>
 
 "Git shortcuts
@@ -156,7 +156,7 @@ let g:test#no_alternate = 1
 
 let test#custom_runners = {'Ruby': ['rails_decorators']}
 
-call camelcasemotion#CreateMotionMappings(',')
+" call camelcasemotion#CreateMotionMappings(',')
 
 let g:projectionist_heuristics = {
   \ "package.json": {
@@ -172,9 +172,6 @@ vnoremap ; :
 vnoremap : ;
 
 nnoremap <silent> <C-p> :Telescope find_files<CR>
-
-" bind K to grep word under cursor
-nnoremap K :Ack! "\b<C-R><C-W>\b"<CR>:cw<CR>
 
 command! MN tabe my-notes.md
 
@@ -193,7 +190,7 @@ set cursorline
 set termguicolors
 set background=dark
 
-colorscheme gruvbox
+" colorscheme gruvbox
 
 let g:fzf_history_dir = '~/.cache/fzf-history'
 
@@ -217,5 +214,6 @@ filetype indent        on
 syntax on
 
 lua <<EOF
-require('jonmast')
+  require('config.lsp-attach')
+  require("config.lazy")
 EOF
