@@ -50,3 +50,8 @@ codecompanion.workspace.json
 AGENTS.md
 yarn-error.log
 .spec-workflow
+.sisyphus
+.superpowers
+plans/superpowers
+.worktrees
+docs/superpowers

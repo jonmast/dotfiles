@@ -21,7 +21,32 @@ return {
       'hrsh7th/cmp-nvim-lsp-signature-help',
       {
         "zbirenbaum/copilot-cmp",
-        opts = {}
+        config = function()
+          local monkeypatch = require("copilot_cmp.source")
+          monkeypatch.is_available = function(self)
+            -- client is stopped.
+            if self.client:is_stopped() or self.client.name ~= "copilot" then
+              return false
+            end
+
+            local get_source_client = function()
+              if vim.lsp.get_clients == nil then
+                return vim.lsp.get_active_clients({
+                  bufnr = vim.api.nvim_get_current_buf(),
+                  id = self.client.id,
+                })
+              end
+              return vim.lsp.get_clients({
+                bufnr = vim.api.nvim_get_current_buf(),
+                id = self.client.id,
+              })
+            end
+
+            return next(get_source_client()) ~= nil
+          end
+
+          require("copilot_cmp").setup()
+        end
       }
     },
     opts = function()
@@ -105,5 +130,12 @@ return {
         'yamlls',
       })
     end
+  },
+  {
+    -- Unload unused LSP servers
+    "zeioth/garbage-day.nvim",
+    event = "VeryLazy",
+    opts = {
+    }
   },
 }

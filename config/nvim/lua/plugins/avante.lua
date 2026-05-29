@@ -27,7 +27,6 @@ return {
     build = "make",
     dependencies = {
       "nvim-treesitter/nvim-treesitter",
-      'Davidyz/VectorCode',
       "stevearc/dressing.nvim",
       "nvim-lua/plenary.nvim",
       "MunifTanjim/nui.nvim",

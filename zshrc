@@ -1,7 +1,7 @@
 export ASDF_DATA_DIR="$HOME/.asdf"
 export PATH=.git/safe/../../bin:$ASDF_DATA_DIR/shims:$HOME/.local/bin:$PATH:$HOME/.yarn/bin:$HOME/.cargo/bin
 
-# export CARGO_TARGET_DIR=~/.cargo/build_cache
+export ASDF_NODEJS_AUTO_ENABLE_COREPACK=1
 export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡 Alias tip: "
 export ZSH_PLUGINS_ALIAS_TIPS_EXPAND=1
 export NVIM_TUI_ENABLE_TRUE_COLOR=1
@@ -79,6 +79,10 @@ alias tmux="env TERM=xterm-256color tmux" #hopefully fix strange vim+tmux issues
 [[ -a  "/usr/local/opt/fzf/shell/key-bindings.zsh" ]] && source "/usr/local/opt/fzf/shell/key-bindings.zsh"
 # New fzf install
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+if [ -n "${GHOSTTY_RESOURCES_DIR}" ]; then
+  builtin source "${GHOSTTY_RESOURCES_DIR}/shell-integration/zsh/ghostty-integration"
+fi
 
 # fbr - checkout git branch (including remote branches)
 fbr() {
@@ -263,3 +267,8 @@ ghce() {
 
 	GH_DEBUG="$GH_DEBUG" GH_HOST="$GH_HOST" gh copilot explain "$@"
 }
+
+[ -f ~/.free-coding-models.env ] && . ~/.free-coding-models.env  # free-coding-models-env
+
+export PATH="/Users/jon/.bun/bin:$PATH"
+export OPENCODE_ENABLE_EXA=1
