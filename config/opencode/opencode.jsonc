@@ -1,0 +1,73 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "mcp": {
+    "mikes-minion": {
+      "enabled": false,
+      "headers": {
+        "Authorization": "{file:~/.config/secrets/opencode/mikes-minion-authorization}"
+      },
+      "type": "remote",
+      "url": "https://pm-dashboard-production-2c16.up.railway.app"
+    },
+    "sentry": {
+      "enabled": false,
+      "oauth": {},
+      "type": "remote",
+      "url": "https://mcp.sentry.dev/mcp"
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true,
+      "headers": {
+        "CONTEXT7_API_KEY": "{file:~/.config/secrets/opencode/context7-api-key}"
+      }
+    }
+  },
+  "permission": {
+    "bash": {
+      "gt modify *": "ask",
+      "git push *": "ask",
+      "jira *": "ask",
+      "jira me": "allow",
+      "jira issue list *": "allow",
+      "jira issue view *": "allow",
+    }
+  },
+  "agent": {
+    "plan": {
+      "permission": {
+        "bash": {
+          "*": "ask",
+          "git diff *": "allow",
+          "git status *": "allow",
+          "git status": "allow",
+          "ls": "allow",
+          "npm run *": "allow",
+          "pwd": "allow"
+        }
+      }
+    }
+  },
+  "plugin": [
+    [
+      "file:///Users/jon/up-to-no-good/superpowers",
+      {
+        "directoryPrefix": "~/projects"
+      }
+    ],
+    "@mohak34/opencode-notifier@latest",
+    "@plannotator/opencode@latest",
+    "@cortexkit/aft-opencode@latest",
+    "@cortexkit/opencode-magic-context@latest",
+  ],
+  "instructions": [
+    "/Users/jon/.config/opencode/rules/*.md"
+  ],
+  "lsp": false,
+  "compaction": {
+    "auto": false,
+    "prune": false
+  }
+}
