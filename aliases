@@ -56,7 +56,7 @@ alias bi="bundle install"
 alias bcn="bundle clean"
 
 if type eza &> /dev/null; then
-  alias ls="eza"
+  alias ls="eza --icons"
 fi
 
 if type /opt/homebrew/bin/grm &> /dev/null; then
