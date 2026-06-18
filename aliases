@@ -77,5 +77,4 @@ alias JSC="JS_DRIVER=chrome"
 alias gop='gh pr create -w'
 
 alias tree='eza -T'
-alias claude="/Users/jon/.claude/local/claude"
 (( $+aliases[sd] )) && unalias sd

@@ -55,3 +55,5 @@ yarn-error.log
 plans/superpowers
 .worktrees
 docs/superpowers
+
+**/.claude/settings.local.json

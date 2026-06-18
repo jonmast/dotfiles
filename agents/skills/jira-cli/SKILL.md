@@ -1,6 +1,6 @@
 ---
 name: jira-cli
-description: Interact with Jira from the command line to create, list, view, edit, and transition issues, manage sprints and epics, and perform common Jira workflows. Use when the user asks about Jira tasks, tickets, issues, sprints, or needs to manage project work items.
+description: Interact with Jira from the command line to create, list, view, edit, and transition issues. Use when the user asks about Jira tasks, tickets, issues, or mentions a ticket ID.
 license: MIT
 compatibility: Requires jira-cli installed (https://github.com/ankitpokhrel/jira-cli) and configured with `jira init`. Requires JIRA_API_TOKEN environment variable.
 metadata:
