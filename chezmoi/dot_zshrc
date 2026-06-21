@@ -15,6 +15,9 @@ if type brew &>/dev/null
 then
   FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
 fi
+for profile in ${(z)NIX_PROFILES}; do
+  fpath+=($profile/share/zsh/site-functions $profile/share/zsh/$ZSH_VERSION/functions $profile/share/zsh/vendor-completions)
+done
 
 
 # Load antigen
@@ -33,11 +36,6 @@ antigen bundle docker
 antigen bundle docker-compose
 antigen bundle yarn
 antigen apply
-
-# ASDF requires compinit, but it should be run after OMZ init
-# autoload -Uz compinit
-# compinit
-# [[ -a $HOME/.asdf/asdf.sh ]] && source $HOME/.asdf/asdf.sh
 
 compdef g=git
 compdef mycli=mysql
@@ -84,6 +82,7 @@ if [ -n "${GHOSTTY_RESOURCES_DIR}" ]; then
   builtin source "${GHOSTTY_RESOURCES_DIR}/shell-integration/zsh/ghostty-integration"
 fi
 
+[[ -f ~/.nix-profile/etc/profile.d/hm-session-vars.sh ]] && source ~/.nix-profile/etc/profile.d/hm-session-vars.sh 
 # fbr - checkout git branch (including remote branches)
 fbr() {
   local branches branch
@@ -270,11 +269,12 @@ ghce() {
 
 [ -f ~/.free-coding-models.env ] && . ~/.free-coding-models.env  # free-coding-models-env
 
-export PATH="/Users/jon/.bun/bin:$PATH"
-export OPENCODE_ENABLE_EXA=1
-
 # opencode
-export PATH=/Users/jon/.opencode/bin:$PATH
+export PATH=/home/jon/.opencode/bin:$PATH
+
+# >>> oh-my-opencode-slim background subagents >>>
+export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true
+# <<< oh-my-opencode-slim background subagents <<<
 
 # Vite+ bin (https://viteplus.dev)
 [[ -f "$HOME/.vite-plus/env" ]] && . "$HOME/.vite-plus/env"

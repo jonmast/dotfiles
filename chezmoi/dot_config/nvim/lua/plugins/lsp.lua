@@ -1,3 +1,4 @@
+
 return {
   {
     "zbirenbaum/copilot.lua",
@@ -124,6 +125,7 @@ return {
         'graphql',
         'jsonls',
         'prismals',
+        'nixd',
         'rust_analyzer',
         'tsgo',
         'vimls',
