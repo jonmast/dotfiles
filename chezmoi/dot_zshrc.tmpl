@@ -15,9 +15,11 @@ if type brew &>/dev/null
 then
   FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
 fi
+{{- if eq .chezmoi.os "linux" }}
 for profile in ${(z)NIX_PROFILES}; do
   fpath+=($profile/share/zsh/site-functions $profile/share/zsh/$ZSH_VERSION/functions $profile/share/zsh/vendor-completions)
 done
+{{- end }}
 
 
 # Load antigen
@@ -82,7 +84,9 @@ if [ -n "${GHOSTTY_RESOURCES_DIR}" ]; then
   builtin source "${GHOSTTY_RESOURCES_DIR}/shell-integration/zsh/ghostty-integration"
 fi
 
-[[ -f ~/.nix-profile/etc/profile.d/hm-session-vars.sh ]] && source ~/.nix-profile/etc/profile.d/hm-session-vars.sh 
+{{- if eq .chezmoi.os "linux" }}
+[[ -f ~/.nix-profile/etc/profile.d/hm-session-vars.sh ]] && source ~/.nix-profile/etc/profile.d/hm-session-vars.sh
+{{- end }}
 # fbr - checkout git branch (including remote branches)
 fbr() {
   local branches branch

@@ -1,6 +1,10 @@
 # improve colors
 # set -g default-terminal 'screen-256color'
+{{- if eq .chezmoi.os "darwin" }}
+set -g default-shell /bin/zsh
+{{- else }}
 set -g default-shell /home/jon/.nix-profile/bin/zsh
+{{- end }}
 
 # act like vim
 setw -g mode-keys vi
