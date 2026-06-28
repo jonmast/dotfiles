@@ -1,13 +1,13 @@
 { config, pkgs, lib, handy, ... }:
 
-let
-  # Fractal with a personal patch that moves the quick-reaction chooser
-  # from the right-click context menu to a hover-revealed button.
-  # See nix/patches/README.md for regeneration instructions.
-  fractalPatched = pkgs.fractal.overrideAttrs (old: {
-    patches = old.patches ++ [ ../patches/fractal-hover-reactions.patch ];
-  });
-in
+# Fractal with a personal hover-reactions patch. Disabled for now because
+# the rebuild is slow. Uncomment the `let` block + swap `fractal` back to
+# `fractalPatched` in home.packages to re-enable. See nix/patches/README.md.
+# let
+#   fractalPatched = pkgs.fractal.overrideAttrs (old: {
+#     patches = old.patches ++ [ ../patches/fractal-hover-reactions.patch ];
+#   });
+# in
 {
   imports = [ handy.homeManagerModules.default ];
 
@@ -27,7 +27,7 @@ in
     ffmpeg
     file
     fluxcd
-    fractalPatched
+    fractal  # patch currently disabled — see top of file
     freecad-wayland
     fzf
     ghostty
