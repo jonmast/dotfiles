@@ -1,0 +1,10 @@
+# Nix build outputs (created by `nix build`, `nix-build`, `nixos-rebuild`).
+# These are convenience symlinks dropped into the working directory on every
+# build — point to the active system/home-manager generation in /nix/store.
+# They have no place in version control.
+result
+result-*
+
+# Stashed diffs from in-flight migrations (see .stashes/).
+# Currently holds home-manager-WIP.patch from the nix migration.
+.stashes/
