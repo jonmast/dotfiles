@@ -1,0 +1,486 @@
+diff --git a/data/resources/stylesheet/_room_history.scss b/data/resources/stylesheet/_room_history.scss
+index e1ef95ab..35eb0e03 100644
+--- a/data/resources/stylesheet/_room_history.scss
++++ b/data/resources/stylesheet/_room_history.scss
+@@ -418,6 +418,16 @@ message-reactions {
+   }
+ }
+ 
++.hover-actions {
++  opacity: 0;
++  pointer-events: none;
++  transition: opacity 200ms vendor.$ease-out-quad;
++}
++
++event-row:hover .hover-actions {
++  opacity: 1;
++}
++
+ read-receipts-list {
+   min-height: 20px;
+   min-width: 20px;
+diff --git a/src/components/label_with_widgets.rs b/src/components/label_with_widgets.rs
+index 673dad2d..e369e5f6 100644
+--- a/src/components/label_with_widgets.rs
++++ b/src/components/label_with_widgets.rs
+@@ -52,6 +52,7 @@ mod imp {
+             child.set_wrap_mode(pango::WrapMode::WordChar);
+             child.set_xalign(0.0);
+             child.set_valign(gtk::Align::Start);
++            child.set_selectable(true);
+         }
+ 
+         fn dispose(&self) {
+diff --git a/src/session_view/room_history/event_actions/context_menu.rs b/src/session_view/room_history/event_actions/context_menu.rs
+index 04aa4b75..da218487 100644
+--- a/src/session_view/room_history/event_actions/context_menu.rs
++++ b/src/session_view/room_history/event_actions/context_menu.rs
+@@ -1,9 +1,6 @@
+ use gettextrs::gettext;
+ use gtk::{gio, prelude::*};
+ 
+-use super::QuickReactionChooser;
+-use crate::session::ReactionList;
+-
+ /// Helper struct for the context menu of a row presenting an [`Event`].
+ ///
+ /// [`Event`]: crate::session::Event
+@@ -11,60 +8,6 @@ use crate::session::ReactionList;
+ pub(crate) struct EventActionsContextMenu {
+     /// The popover of the context menu.
+     pub(crate) popover: gtk::PopoverMenu,
+-    /// The menu model of the popover.
+-    menu_model: gio::Menu,
+-    /// The quick reaction chooser in the context menu.
+-    quick_reaction_chooser: QuickReactionChooser,
+-}
+-
+-impl EventActionsContextMenu {
+-    /// The identifier in the context menu for the quick reaction chooser.
+-    const QUICK_REACTION_CHOOSER_ID: &str = "quick-reaction-chooser";
+-
+-    /// Whether the menu includes an item for the quick reaction chooser.
+-    fn has_quick_reaction_chooser(&self) -> bool {
+-        let first_section = self
+-            .menu_model
+-            .item_link(0, gio::MENU_LINK_SECTION)
+-            .and_downcast::<gio::Menu>()
+-            .expect("event context menu should have at least one section");
+-        first_section
+-            .item_attribute_value(0, "custom", Some(&String::static_variant_type()))
+-            .and_then(|variant| variant.get::<String>())
+-            .is_some_and(|value| value == Self::QUICK_REACTION_CHOOSER_ID)
+-    }
+-
+-    /// Add the quick reaction chooser to this menu, if it is not already
+-    /// present, and set the reaction list.
+-    pub(crate) fn add_quick_reaction_chooser(&self, reactions: ReactionList) {
+-        if !self.has_quick_reaction_chooser() {
+-            let section_menu = gio::Menu::new();
+-            let item = gio::MenuItem::new(None, None);
+-            item.set_attribute_value(
+-                "custom",
+-                Some(&Self::QUICK_REACTION_CHOOSER_ID.to_variant()),
+-            );
+-            section_menu.append_item(&item);
+-            self.menu_model.insert_section(0, None, &section_menu);
+-
+-            self.popover.add_child(
+-                &self.quick_reaction_chooser,
+-                Self::QUICK_REACTION_CHOOSER_ID,
+-            );
+-        }
+-
+-        self.quick_reaction_chooser.set_reactions(Some(reactions));
+-    }
+-
+-    /// Remove the quick reaction chooser from this menu, if it is present.
+-    pub(crate) fn remove_quick_reaction_chooser(&self) {
+-        if !self.has_quick_reaction_chooser() {
+-            return;
+-        }
+-
+-        self.popover.remove_child(&self.quick_reaction_chooser);
+-        self.menu_model.remove(0);
+-    }
+ }
+ 
+ impl Default for EventActionsContextMenu {
+@@ -82,10 +25,6 @@ impl Default for EventActionsContextMenu {
+             .build();
+         popover.update_property(&[gtk::accessible::Property::Label(&gettext("Context Menu"))]);
+ 
+-        Self {
+-            popover,
+-            menu_model,
+-            quick_reaction_chooser: Default::default(),
+-        }
++        Self { popover }
+     }
+ }
+diff --git a/src/session_view/room_history/event_actions/mod.rs b/src/session_view/room_history/event_actions/mod.rs
+index ab167dc6..a8760963 100644
+--- a/src/session_view/room_history/event_actions/mod.rs
++++ b/src/session_view/room_history/event_actions/mod.rs
+@@ -3,5 +3,5 @@ mod group;
+ mod properties_dialog;
+ mod quick_reaction_chooser;
+ 
+-use self::quick_reaction_chooser::*;
++pub(super) use self::quick_reaction_chooser::*;
+ pub(super) use self::{context_menu::*, group::*, properties_dialog::*};
+diff --git a/src/session_view/room_history/event_row.rs b/src/session_view/room_history/event_row.rs
+index 3ded8569..51bc57a3 100644
+--- a/src/session_view/room_history/event_row.rs
++++ b/src/session_view/room_history/event_row.rs
+@@ -78,12 +78,8 @@ mod imp {
+             };
+ 
+             let obj = self.obj();
+-            let Some(event) = self.event.obj() else {
+-                obj.set_popover(None);
+-                return;
+-            };
+-            if self.action_group.borrow().is_none() {
+-                // There are no possible actions.
++            if self.event.obj().is_none() || self.action_group.borrow().is_none() {
++                // There is no event or no possible actions.
+                 obj.set_popover(None);
+                 return;
+             }
+@@ -110,12 +106,6 @@ mod imp {
+             ));
+             closed_handler_cell.replace(Some(closed_handler));
+ 
+-            if event.can_be_reacted_to() {
+-                menu.add_quick_reaction_chooser(event.reactions());
+-            } else {
+-                menu.remove_quick_reaction_chooser();
+-            }
+-
+             room_history.enable_sticky_mode(false);
+             obj.add_css_class("has-open-popup");
+ 
+@@ -352,7 +342,6 @@ mod imp {
+         fn update_actions(&self) {
+             let obj = self.obj();
+             let action_group = self.event_actions_group();
+-            let has_context_menu = action_group.is_some();
+ 
+             if let Some(copy_image_action) = action_group
+                 .as_ref()
+@@ -384,7 +373,10 @@ mod imp {
+ 
+             obj.insert_action_group("event", action_group.as_ref());
+             self.action_group.replace(action_group);
+-            obj.set_has_context_menu(has_context_menu);
++            // The custom context menu has been replaced by the hover reactions
++            // button and inline selectable text, so never claim clicks/long
++            // presses for a popover — doing so would steal text selection.
++            obj.set_has_context_menu(false);
+         }
+     }
+ }
+diff --git a/src/session_view/room_history/message_row/mod.blp b/src/session_view/room_history/message_row/mod.blp
+index 415895df..31e2af47 100644
+--- a/src/session_view/room_history/message_row/mod.blp
++++ b/src/session_view/room_history/message_row/mod.blp
+@@ -2,95 +2,120 @@ using Gtk 4.0;
+ using Adw 1;
+ 
+ template $ContentMessageRow: Adw.Bin {
+-  Gtk.Grid {
+-    column-spacing: 8;
+-
+-    styles [
+-      "event-content",
+-    ]
+-
+-    Gtk.Button avatar_button {
+-      tooltip-text: _("Show Sender Profile");
+-      valign: start;
+-      clicked => $view_sender_profile() swapped;
++  Gtk.Overlay {
++    child: Gtk.Grid {
++      column-spacing: 8;
+ 
+       styles [
+-        "circular",
+-        "flat",
+-        "sender-avatar",
++        "event-content",
+       ]
+ 
+-      layout {
+-        column: 0;
+-        row: 0;
+-        row-span: 4;
++      Gtk.Button avatar_button {
++        tooltip-text: _("Show Sender Profile");
++        valign: start;
++        clicked => $view_sender_profile() swapped;
++
++        styles [
++          "circular",
++          "flat",
++          "sender-avatar",
++        ]
++
++        layout {
++          column: 0;
++          row: 0;
++          row-span: 4;
++        }
++
++        child: $Avatar avatar {
++          size: 36;
++          accessible-role: presentation;
++          data: bind template.sender as <$Member>.avatar-data;
++        };
+       }
+ 
+-      child: $Avatar avatar {
+-        size: 36;
+-        accessible-role: presentation;
+-        data: bind template.sender as <$Member>.avatar-data;
+-      };
+-    }
+-
+-    Gtk.Box header {
+-      spacing: 5;
+-      margin-bottom: 3;
+-
+-      layout {
+-        column: 1;
+-        row: 0;
+-        column-span: 2;
++      Gtk.Box header {
++        spacing: 5;
++        margin-bottom: 3;
++
++        layout {
++          column: 1;
++          row: 0;
++          column-span: 2;
++        }
++
++        $ContentMessageSenderName display_name {
++          hexpand: true;
++          halign: start;
++        }
++
++        $EventTimestamp timestamp {
++          hexpand: true;
++          datetime: bind template.event as <$RoomEvent>.timestamp;
++        }
+       }
+ 
+-      $ContentMessageSenderName display_name {
++      $ContentMessageContent content {
+         hexpand: true;
+-        halign: start;
+-      }
++        vexpand: true;
+ 
+-      $EventTimestamp timestamp {
+-        hexpand: true;
+-        datetime: bind template.event as <$RoomEvent>.timestamp;
++        layout {
++          column: 1;
++          row: 1;
++        }
+       }
+-    }
+ 
+-    $ContentMessageContent content {
+-      hexpand: true;
+-      vexpand: true;
++      $MessageStateStack message_state {
++        valign: end;
+ 
+-      layout {
+-        column: 1;
+-        row: 1;
++        layout {
++          column: 2;
++          row: 1;
++        }
+       }
+-    }
+ 
+-    $MessageStateStack message_state {
+-      valign: end;
+-
+-      layout {
+-        column: 2;
+-        row: 1;
++      $ContentMessageReactionList reactions {
++        layout {
++          column: 1;
++          row: 2;
++          column-span: 2;
++        }
+       }
+-    }
+ 
+-    $ContentMessageReactionList reactions {
+-      layout {
+-        column: 1;
+-        row: 2;
+-        column-span: 2;
++      $ContentReadReceiptsList read_receipts {
++        visible: bind template.event as <$RoomEvent>.has-read-receipts;
++        members: bind template.event as <$RoomEvent>.timeline as <$Timeline>.room as <$Room>.members;
++        source: bind template.event as <$RoomEvent>.read-receipts;
++
++        layout {
++          column: 1;
++          row: 3;
++          column-span: 2;
++        }
+       }
+-    }
++    };
+ 
+-    $ContentReadReceiptsList read_receipts {
+-      visible: bind template.event as <$RoomEvent>.has-read-receipts;
+-      members: bind template.event as <$RoomEvent>.timeline as <$Timeline>.room as <$Room>.members;
+-      source: bind template.event as <$RoomEvent>.read-receipts;
++    [overlay]
++    Gtk.MenuButton hover_reactions_button {
++      valign: start;
++      halign: end;
++      icon-name: "emoji-symbolic";
++      tooltip-text: _("Add Reaction");
+ 
+-      layout {
+-        column: 1;
+-        row: 3;
+-        column-span: 2;
+-      }
++      styles [
++        "flat",
++        "circular",
++        "hover-actions",
++      ]
++
++      popover: Gtk.Popover {
++        autohide: true;
++        has-arrow: false;
++        position: bottom;
++
++        child: $QuickReactionChooser hover_reactions_chooser {
++        };
++      };
+     }
+   }
+ }
+diff --git a/src/session_view/room_history/message_row/mod.rs b/src/session_view/room_history/message_row/mod.rs
+index 55358db8..82582ff3 100644
+--- a/src/session_view/room_history/message_row/mod.rs
++++ b/src/session_view/room_history/message_row/mod.rs
+@@ -1,5 +1,5 @@
+ use adw::{prelude::*, subclass::prelude::*};
+-use gtk::{gdk, glib, glib::clone};
++use gtk::{gdk, gio, glib, glib::clone};
+ use tracing::error;
+ 
+ mod audio;
+@@ -21,7 +21,9 @@ use self::{
+     message_state_stack::MessageStateStack, reaction_list::MessageReactionList,
+     sender_name::MessageSenderName,
+ };
+-use super::{EventTimestamp, ReadReceiptsList};
++use super::{
++    event_actions::QuickReactionChooser, EventTimestamp, ReadReceiptsList,
++};
+ use crate::{
+     components::UserProfileDialog,
+     prelude::*,
+@@ -52,6 +54,10 @@ mod imp {
+         message_state: TemplateChild<MessageStateStack>,
+         #[template_child]
+         reactions: TemplateChild<MessageReactionList>,
++        #[template_child]
++        hover_reactions_button: TemplateChild<gtk::MenuButton>,
++        #[template_child]
++        hover_reactions_chooser: TemplateChild<QuickReactionChooser>,
+         binding: RefCell<Option<glib::Binding>>,
+         /// The event that is presented.
+         #[property(get, set = Self::set_event, explicit_notify)]
+@@ -108,6 +114,40 @@ mod imp {
+                     obj.notify_texture();
+                 }
+             ));
++
++            // Install a `context-menu.close` action on the hover reactions
++            // button that pops down its popover, so that clicking a quick
++            // reaction (which the chooser fires `context-menu.close` on) closes
++            // our popover.
++            let close_action = gio::SimpleAction::new("close", None);
++            let button = &*self.hover_reactions_button;
++            close_action.connect_activate(clone!(
++                #[weak]
++                button,
++                move |_, _| {
++                    if let Some(popover) = button.popover() {
++                        popover.popdown();
++                    }
++                }
++            ));
++            let action_group = gio::SimpleActionGroup::new();
++            action_group.add_action(&close_action);
++            button.insert_action_group("context-menu", Some(&action_group));
++
++            // When the "More reactions" button in the chooser is clicked, close
++            // our popover and activate the system emoji chooser.
++            self.hover_reactions_chooser.connect_more_reactions_activated(
++                clone!(
++                    #[weak]
++                    obj,
++                    move |_chooser| {
++                        if let Some(popover) = obj.imp().hover_reactions_button.popover() {
++                            popover.popdown();
++                        }
++                        let _ = obj.activate_action("event.show-reactions-chooser", None);
++                    }
++                ),
++            );
+         }
+ 
+         fn dispose(&self) {
+@@ -162,6 +202,10 @@ mod imp {
+ 
+             self.reactions
+                 .set_reaction_list(&event.room().get_or_create_members(), &event.reactions());
++            self.hover_reactions_chooser
++                .set_reactions(Some(event.reactions()));
++            self.hover_reactions_button
++                .set_visible(event.can_be_reacted_to());
+             self.event
+                 .set(event, vec![header_state_handler, item_changed_handler]);
+ 
+diff --git a/src/session_view/room_history/message_row/text/widgets.rs b/src/session_view/room_history/message_row/text/widgets.rs
+index dcefb8ac..dfeebe05 100644
+--- a/src/session_view/room_history/message_row/text/widgets.rs
++++ b/src/session_view/room_history/message_row/text/widgets.rs
+@@ -42,6 +42,7 @@ pub(super) fn new_message_label() -> gtk::Label {
+         .xalign(0.0)
+         .valign(gtk::Align::Start)
+         .use_markup(true)
++        .selectable(true)
+         .css_classes(["document"])
+         .build()
+ }
+diff --git a/src/session_view/room_history/state/group_item_row.rs b/src/session_view/room_history/state/group_item_row.rs
+index 3dec9613..f0b53974 100644
+--- a/src/session_view/room_history/state/group_item_row.rs
++++ b/src/session_view/room_history/state/group_item_row.rs
+@@ -261,7 +261,6 @@ mod imp {
+             };
+ 
+             let menu = room_history.event_context_menu();
+-            menu.remove_quick_reaction_chooser();
+ 
+             room_history.enable_sticky_mode(false);
+             obj.add_css_class("has-open-popup");
