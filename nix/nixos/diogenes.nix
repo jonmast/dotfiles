@@ -118,6 +118,12 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
+  # Silence the x86_64-darwin deprecation warning emitted transitively by a
+  # flake input (Handy → bun2nix) that enumerates darwin systems. Official
+  # opt-in knob; propagates through the nixpkgs `follows` chain. This Linux
+  # host never builds darwin, so the warning is pure noise.
+  nixpkgs.config.allowDeprecatedx86_64Darwin = true;
+
   environment.systemPackages = with pkgs; [
   ];
 

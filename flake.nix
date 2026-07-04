@@ -5,6 +5,11 @@
     # Specify the source of Home Manager and Nixpkgs.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
+    # Pin a known-good nixpkgs for orca-slicer. 2.3.2 in nixos-unstable
+    # is broken (graphical plates won't open):
+    # https://github.com/OrcaSlicer/OrcaSlicer/issues/13137
+    nixpkgs-orca.url = "github:nixos/nixpkgs/62efab0dada7d38f14f7147bdd6c350780e9af10";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -16,32 +21,45 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, handy, ... }:
+  outputs = { self, nixpkgs, home-manager, handy, nixpkgs-orca, ... }@inputs:
     let
       system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
     in
     {
-      # Standalone home-manager activation:
-      #   home-manager switch --flake .#jon
-      homeConfigurations."jon" = home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
-        extraSpecialArgs = { inherit handy; };
-        modules = [ ./nix/home/default.nix ];
-      };
-
-      # NixOS system config (also activates home-manager for the jon user):
+      # NixOS system config (also activates home-manager for the jon user).
       #   sudo nixos-rebuild switch --flake .#diogenes
+      #
+      # home-manager runs as a NixOS module (not standalone) so there is a
+      # single activation path and a single nixpkgs evaluation. Running both
+      # `nixos-rebuild` and a standalone `home-manager switch` for the same
+      # user is discouraged upstream — they fight over the same generation
+      # profile and a reboot/rebuild can silently revert standalone changes.
+      # If a macOS host is ever added it gets its own standalone/nix-darwin
+      # output; this Linux host stays module-only.
       nixosConfigurations.diogenes = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
           ./nix/nixos/diogenes.nix
           home-manager.nixosModules.home-manager
           {
+            # System-level overlay: pin orca-slicer to a known-good nixpkgs.
+            # 2.3.2 in nixos-unstable is broken (graphical plates won't open):
+            # https://github.com/OrcaSlicer/OrcaSlicer/issues/13137
+            # With useGlobalPkgs = true, home-manager shares this pkgs set, so
+            # the overlay reaches home.packages without a second nixpkgs eval.
+            nixpkgs.overlays = [
+              (final: _prev: {
+                orca-slicer =
+                  (import nixpkgs-orca {
+                    inherit system;
+                  }).orca-slicer;
+              })
+            ];
+
             home-manager = {
               useGlobalPkgs = true;
               users.jon = { imports = [ ./nix/home/default.nix ]; };
-              extraSpecialArgs = { inherit handy; };
+              extraSpecialArgs = { inherit inputs handy; };
             };
           }
         ];

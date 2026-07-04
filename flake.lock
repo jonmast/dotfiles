@@ -131,11 +131,28 @@
         "type": "github"
       }
     },
+    "nixpkgs-orca": {
+      "locked": {
+        "lastModified": 1772186193,
+        "narHash": "sha256-D5tSxP5x7SDj/jsnQii5FzrRd5wep8H2inxz7gDokZs=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "62efab0dada7d38f14f7147bdd6c350780e9af10",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "62efab0dada7d38f14f7147bdd6c350780e9af10",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "handy": "handy",
         "home-manager": "home-manager",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "nixpkgs-orca": "nixpkgs-orca"
       }
     },
     "systems": {
