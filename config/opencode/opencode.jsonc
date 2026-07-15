@@ -36,16 +36,22 @@
       "jira *": "ask",
       "JIRA_READ_ONLY=1 jira *": "allow",
       "jira schema": "allow",
+      "jira * list *": "allow",
+      "jira * show *": "allow",
       "jira issues view *": "allow",
       "jira issues show *": "allow",
       "jira issues mine *": "allow",
       "jira issues list-transitions *": "allow",
+      "jira issues list *": "allow",
       "jira search *": "allow",
       "tempo *": "ask",
-      "tempo list *": "allow"
+      "tempo list *": "allow",
+      "*/api-runner exec *": "ask"
     },
-    "external_directory": {
-      "/dev/null": "allow",
+  },
+  "references": {
+    "ethel": {
+      "path": "/Users/jon/projects/vtex/ethel"
     }
   },
   "agent": {
@@ -75,10 +81,31 @@
       }
     ],
     "@mohak34/opencode-notifier@latest",
-    "@plannotator/opencode@latest",
     "@cortexkit/aft-opencode@latest",
     "@cortexkit/opencode-magic-context@latest",
-    "@cortexkit/opencode-anthropic-auth@1.9.4",
+    "@cortexkit/opencode-anthropic-auth@1.13.0",
+    [
+      "file:///Users/jon/up-to-no-good/replicants",
+      {
+        "preset": "standard",
+        "presets": {
+          "standard": {
+            "light": {
+              "model": "opencode-go/deepseek-v4-flash"
+            },
+            "standard": {
+              "model": "opencode-go/deepseek-v4-flash",
+              "variant": "high"
+            },
+            "heavy": {
+              // "model": "anthropic/claude-fable-5"
+              "model": "anthropic/claude-opus-4-8"
+              // "model": "opencode-go/glm-5.2"
+            }
+          }
+        }
+      }
+    ]
   ],
   "instructions": [
     "/Users/jon/.config/opencode/rules/*.md"
@@ -88,5 +115,18 @@
   "compaction": {
     "auto": false,
     "prune": false
+  },
+  "provider": {
+    "homelab": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://llm.homelab.jonmast.com/v1"
+      },
+      "models": {
+        "qwen3.6": {
+          "name": "Qwen 3.6"
+        }
+      }
+    },
   }
 }
