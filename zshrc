@@ -272,3 +272,9 @@ ghce() {
 
 export PATH="/Users/jon/.bun/bin:$PATH"
 export OPENCODE_ENABLE_EXA=1
+
+# opencode
+export PATH=/Users/jon/.opencode/bin:$PATH
+
+# Vite+ bin (https://viteplus.dev)
+. "$HOME/.vite-plus/env"

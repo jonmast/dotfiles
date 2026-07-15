@@ -57,3 +57,6 @@ plans/superpowers
 docs/superpowers
 
 **/.claude/settings.local.json
+.cortexkit
+
+**/node_modules/

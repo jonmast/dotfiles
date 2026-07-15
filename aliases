@@ -67,6 +67,7 @@ alias rg="rg --max-columns=1000 --max-columns-preview --smart-case --type-add='h
 
 alias or='oxidux restart'
 alias oc='opencode'
+alias oc2='opencode2'
 alias os='oxidux stop'
 alias bor='bundle && oxidux restart'
 
