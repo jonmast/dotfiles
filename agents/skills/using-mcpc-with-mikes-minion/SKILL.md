@@ -1,6 +1,6 @@
 ---
-name: using-mcpc-with-mikes-minion
-description: Use when answering questions about projects, tickets, meetings, Slack, or time tracking - or any task requiring data from mikes-minion (AgentPM MCP server)
+name: alfie
+description: Use when answering questions about projects, tickets, meetings, Slack, or time tracking - or alfie is mentioned (AgentPM MCP server) (formerly mikes-minion)
 ---
 
 # Using mcpc with mikes-minion

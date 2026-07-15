@@ -45,6 +45,7 @@ Always argue in favor of creating more PRs, as long as they independently pass b
 ## Commit messages
 
 Commit messages will later become the PR description, make them meaningful.
+Focus on the why and business logic, not just recapping the diff.
 
 Always include the JIRA id if possible, ask the user if you don't know.
 
@@ -55,10 +56,8 @@ Example:
 ```commit.txt
 Add carrier service endpoint
 
-Create new endpoint that will be called from checkout extension in the frontend.
-Includes all necessary CORS headers.
-
-Also refactored the schemas into shopify_api for better reusability.
+Add a custom endpoint that proxies Shopify shipping carrier requests to Loft and
+returns the appropriate shipping methods and prices.
 
 PROJ-321
 ```
@@ -76,8 +75,8 @@ For example, a 4 PR stack:
 ```
 AUTH-123/reorder-args
 AUTH-123/improve-logging
-AUTH-123/improve-documentation
-AUTH-123/handle-401-status-codes
+AUTH-124/improve-documentation
+AUTH-124/handle-401-status-codes
 ```
 
 ---
