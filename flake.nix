@@ -24,8 +24,16 @@
   outputs = { self, nixpkgs, home-manager, handy, nixpkgs-orca, ... }@inputs:
     let
       system = "x86_64-linux";
+      pkgs = import nixpkgs { inherit system; };
     in
     {
+      packages.${system} = {
+        ocmonitor = pkgs.callPackage ./nix/packages/ocmonitor { };
+        opencode2 = pkgs.callPackage ./nix/packages/opencode2 { };
+        lazyskills = pkgs.callPackage ./nix/packages/lazyskills { };
+        default = self.packages.${system}.ocmonitor;
+      };
+
       # NixOS system config (also activates home-manager for the jon user).
       #   sudo nixos-rebuild switch --flake .#diogenes
       #
@@ -53,6 +61,10 @@
                   (import nixpkgs-orca {
                     inherit system;
                   }).orca-slicer;
+
+                ocmonitor = final.callPackage ./nix/packages/ocmonitor { };
+                opencode2 = final.callPackage ./nix/packages/opencode2 { };
+                lazyskills = final.callPackage ./nix/packages/lazyskills { };
               })
             ];
 

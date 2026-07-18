@@ -1,17 +1,32 @@
 { config, pkgs, lib, handy, ... }:
 
-# Fractal with a personal hover-reactions patch. Disabled for now because
-# the rebuild is slow. Uncomment the `let` block + swap `fractal` back to
-# `fractalPatched` in home.packages to re-enable. See nix/patches/README.md.
-# let
-#   fractalPatched = pkgs.fractal.overrideAttrs (old: {
-#     patches = old.patches ++ [ ../patches/fractal-hover-reactions.patch ];
-#   });
-# in
+let
+  fractalPatched = pkgs.fractal.overrideAttrs (old: {
+    patches = old.patches ++ [ ../patches/fractal-hover-reactions.patch ];
+  });
+in
 {
-  imports = [ handy.homeManagerModules.default ];
-
-  services.handy.enable = true;
+  # Handy speech-to-text: defined here instead of via
+  # handy.homeManagerModules.default because the upstream module runs
+  # the GUI directly with Restart=on-failure, so on every rebuild the
+  # window pops up and any close attempt respawns it 5s later
+  # ("cannot be closed" loop). We run it with --start-hidden so the
+  # tray is ready but the window only appears when you click the tray;
+  # Restart=no lets you actually quit it. Relaunch with
+  # `systemctl --user start handy` or just `handy --start-hidden`
+  # (single-instance plugin will start a new background process).
+  systemd.user.services.handy = {
+    Unit = {
+      Description = "Handy speech-to-text (background, tray)";
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${handy.packages.${pkgs.system}.handy}/bin/handy --start-hidden";
+      Restart = "no";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
 
   home.packages = with pkgs; [
     atool
@@ -27,7 +42,7 @@
     ffmpeg
     file
     fluxcd
-    fractal  # patch currently disabled — see top of file
+    fractalPatched  # patch enabled — see top of file
     freecad-wayland
     fzf
     ghostty
@@ -37,6 +52,7 @@
     jq
     k9s
     kdePackages.kdeconnect-kde
+    lazyskills
     kubeconform
     kubectl
     kubectl-cnpg
@@ -51,6 +67,8 @@
     nix-ld
     nmap
     nodejs
+    ocmonitor
+    opencode2
     orca-slicer
     pv-migrate
     python3
@@ -59,10 +77,11 @@
     ripgrep
     rustfmt
     rustc
-    ops
+    sops
     starship
     strace
     tmux
+    tmuxai
     unzip
     usbutils
     uv
@@ -71,7 +90,7 @@
     yq
     zoxide
     zsh
-  ];
+  ] ++ [ handy.packages.${pkgs.system}.handy ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
