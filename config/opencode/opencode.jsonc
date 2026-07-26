@@ -80,10 +80,9 @@
         "directoryPrefix": "~/projects"
       }
     ],
-    "@mohak34/opencode-notifier@latest",
-    "@cortexkit/aft-opencode@latest",
-    "@cortexkit/opencode-magic-context@latest",
-    "@cortexkit/opencode-anthropic-auth@1.13.0",
+    "@cortexkit/aft-opencode@0.49.0",
+    "@cortexkit/opencode-magic-context@0.33.0",
+    "@cortexkit/opencode-anthropic-auth@1.18.0",
     [
       "file:///Users/jon/up-to-no-good/replicants",
       {
@@ -94,12 +93,11 @@
               "model": "opencode-go/deepseek-v4-flash"
             },
             "standard": {
-              "model": "opencode-go/deepseek-v4-flash",
-              "variant": "high"
+              "model": "opencode-go/minimax-m3",
             },
             "heavy": {
-              // "model": "anthropic/claude-fable-5"
-              "model": "anthropic/claude-opus-4-8"
+              "model": "anthropic/claude-fable-5"
+              // "model": "anthropic/claude-opus-4-8"
               // "model": "opencode-go/glm-5.2"
             }
           }

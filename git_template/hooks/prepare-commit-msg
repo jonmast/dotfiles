@@ -23,9 +23,3 @@ fi
 TEMP=$(mktemp /tmp/commitmsg-XXXXX)
 (printf '\n\n%s\n%s' "$ISSUE_KEY" "$(cat  "$1")") > "$TEMP"
 cat "$TEMP" > "$1"
-
-local_hook="$HOME"/.git_template.local/hooks/prepare-commit-msg
-
-if [ -f "$local_hook" ]; then
-  . "$local_hook"
-fi
