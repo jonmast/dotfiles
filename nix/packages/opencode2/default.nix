@@ -5,11 +5,11 @@
 
 stdenv.mkDerivation rec {
   pname = "opencode2";
-  version = "0.0.0-next-15793";
+  version = "0.0.0-next-16493";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@opencode-ai/cli-linux-x64/-/cli-linux-x64-${version}.tgz";
-    sha256 = "df92eba2fee3ba8fa623f4130b89905d070204a94e6c682ef52846eca16acfc2";
+    sha256 = "1g1rp21zvxbnkxz9w9124ang5zshaf7vh1f0by8nyq3i9bmvzgl3";
   };
 
   sourceRoot = "package";
