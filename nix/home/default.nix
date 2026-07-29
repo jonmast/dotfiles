@@ -4,6 +4,7 @@
   imports = [
     ./common.nix
     ./linux.nix
+    ./hyprland.nix
   ];
 
   # Home Manager needs basic identity info.
