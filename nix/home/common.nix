@@ -48,6 +48,7 @@ in
     ghostty
     gh
     git
+    herdr
     htop
     jq
     k9s
