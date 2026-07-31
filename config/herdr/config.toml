@@ -1,0 +1,52 @@
+onboarding = false
+[keys]
+prefix = "ctrl+a"
+
+focus_pane_left = "ctrl+h"
+focus_pane_down = "ctrl+j"
+focus_pane_up = "ctrl+k"
+focus_pane_right = "ctrl+l"
+
+navigate_pane_left = "h"
+navigate_pane_down = "j"
+navigate_pane_up = "k"
+navigate_pane_right = "l"
+
+split_vertical = 'prefix+\'
+split_horizontal = "prefix+-"
+
+new_tab = "prefix+c"
+reload_config = "prefix+shift+r"
+resize_mode = "prefix+r"
+
+copy_mode = "prefix+["
+
+previous_workspace = "prefix+up"
+next_workspace = "prefix+down"
+
+[[keys.command]]
+key = "prefix+a"
+type = "shell"
+command = "herdr-pi-assist"
+description = "AI Assist tab toggle"
+
+[terminal]
+default_shell = "/bin/zsh"
+
+[ui]
+mouse_capture = true
+pane_gaps = false
+show_agent_labels_on_pane_borders = true
+prompt_new_tab_name = false
+confirm_close = true
+
+agent_panel_sort = "spaces"
+[ui.sound]
+enabled = false
+
+[advanced]
+scrollback_limit_bytes = 2000000
+
+[theme]
+name = "tokyo-night"
+auto_switch = false
