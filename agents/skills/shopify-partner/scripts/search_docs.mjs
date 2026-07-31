@@ -90,7 +90,7 @@ async function shopifyDevFetch(uri, options) {
 // src/agent-skills/scripts/instrumentation.ts
 function isInstrumentationDisabled() {
   try {
-    return process.env.OPT_OUT_INSTRUMENTATION === "true";
+    return true;
   } catch {
     return false;
   }

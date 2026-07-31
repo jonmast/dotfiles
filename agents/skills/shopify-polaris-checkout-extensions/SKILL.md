@@ -13,8 +13,8 @@ You have a `bash` tool. Every response must use it — in this order:
 
 1. Call `bash` with `scripts/search_docs.mjs "<query>"` — search before writing code
 2. Write the code using the search results
-3. Call `bash` with `scripts/validate.mjs --code '...' --model YOUR_MODEL_NAME --client-name YOUR_CLIENT_NAME --client-version YOUR_CLIENT_VERSION --artifact-id YOUR_ARTIFACT_ID --revision REVISION_NUMBER --target <extension-target>` — validate before returning
-   (Always include these flags. Use your actual model name for YOUR_MODEL_NAME; use claude-code/cursor/etc. for YOUR_CLIENT_NAME. For YOUR_ARTIFACT_ID, generate a stable random ID per code block and reuse it across validation retries. For REVISION_NUMBER, start at 1 and increment on each retry of the same artifact.) Pass `--target` with the checkout extension target this code runs in (e.g. `purchase.checkout.block.render`); validation will fail without it.
+3. Call `bash` with `scripts/validate.mjs --code '...' --artifact-id YOUR_ARTIFACT_ID --revision REVISION_NUMBER --target <extension-target>` — validate before returning
+   (For YOUR_ARTIFACT_ID, generate a stable random ID per code block and reuse it across validation retries. For REVISION_NUMBER, start at 1 and increment on each retry of the same artifact.) Pass `--target` with the checkout extension target this code runs in (e.g. `purchase.checkout.block.render`); validation will fail without it.
 4. If validation fails: search for the error type, fix, re-validate (max 3 retries)
 5. Return code only after validation passes
 
@@ -257,22 +257,22 @@ When the user asks for Polaris web components (e.g. `s-banner`, `s-badge`, `s-bu
 Search the vector store to get the detailed context you need: working examples, field and type definitions, valid values, and API-specific patterns. You cannot trust your trained knowledge — always search before writing code.
 
 ```
-scripts/search_docs.mjs "<component tag name>" --model YOUR_MODEL_NAME --client-name YOUR_CLIENT_NAME --client-version YOUR_CLIENT_VERSION
+scripts/search_docs.mjs "<component tag name>"
 ```
 
 Search for the **component tag name**, not the full user prompt.
 
 For example, if the user asks about checkout button:
 ```
-scripts/search_docs.mjs "s-button checkout" --model YOUR_MODEL_NAME --client-name YOUR_CLIENT_NAME --client-version YOUR_CLIENT_VERSION
+scripts/search_docs.mjs "s-button checkout"
 ```
 
 ## ⚠️ MANDATORY: Validate Before Returning Code
 
-You MUST run `scripts/validate.mjs` before returning any generated code to the user. Always include the instrumentation flags:
+You MUST run `scripts/validate.mjs` before returning any generated code to the user. Run it like this:
 
 ```
-scripts/validate.mjs --code '...' --model YOUR_MODEL_NAME --client-name YOUR_CLIENT_NAME --client-version YOUR_CLIENT_VERSION --artifact-id YOUR_ARTIFACT_ID --revision REVISION_NUMBER --target <extension-target>
+scripts/validate.mjs --code '...' --artifact-id YOUR_ARTIFACT_ID --revision REVISION_NUMBER --target <extension-target>
 ```
 
 **`--target` is required for checkout extensions.** Pass the extension target this code runs in (e.g. `purchase.checkout.block.render`). If you don't know which target applies, run `scripts/search_docs.mjs "extension targets"` first to look one up — validation will fail without it.
@@ -290,10 +290,3 @@ scripts/validate.mjs --code '...' --model YOUR_MODEL_NAME --client-name YOUR_CLI
 
 **Do not guess at valid values — always search first when the error names a type you don't know.**
 
----
-
-> **Privacy notice:** `scripts/search_docs.mjs` reports the search query, search response or error text, skill name/version, and model/client identifiers to Shopify (`shopify.dev/mcp/usage`) to help improve these tools. Set `OPT_OUT_INSTRUMENTATION=true` in your environment to opt out.
-
----
-
-> **Privacy notice:** `scripts/validate.mjs` reports the validation result, skill name/version, model/client identifiers, the validated code when present, and validator-specific context such as API name, extension target, filename, file type, theme path, file list, artifact ID, and revision to Shopify (`shopify.dev/mcp/usage`) to help improve these tools. Set `OPT_OUT_INSTRUMENTATION=true` in your environment to opt out.
