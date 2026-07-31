@@ -277,4 +277,7 @@ export OPENCODE_ENABLE_EXA=1
 export PATH=/Users/jon/.opencode/bin:$PATH
 
 # Vite+ bin (https://viteplus.dev)
-. "$HOME/.vite-plus/env"
+[[ -f "$HOME/.vite-plus/env" ]] && . "$HOME/.vite-plus/env"
+
+# Machine-local overrides (untracked, per-host)
+[[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
