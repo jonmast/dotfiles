@@ -74,7 +74,6 @@ in
     pv-migrate
     python3
     restic
-    rcm
     ripgrep
     rustfmt
     rustc

@@ -6,8 +6,8 @@ This flake is the source of truth for all declarative nix-managed config on this
 
 | Output | Activation | Purpose |
 |---|---|---|
-| `homeConfigurations."jon"` | `home-manager switch --flake .#jon` | User-level config (packages, programs, xdg, services). No sudo. |
-| `nixosConfigurations."diogenes"` | `sudo nixos-rebuild switch --flake .#diogenes` | Full NixOS system. Includes home-manager via `home-manager.nixosModules`, so this command also activates home-manager atomically in the same generation. |
+| `nixosConfigurations."diogenes"` | `sudo nixos-rebuild switch --flake .#diogenes` | Full NixOS system. Includes home-manager via `home-manager.nixosModules`, so this command also activates home-manager atomically in the same generation. **This is the only activation command for diogenes.** |
+| `homeConfigurations."jon"` | `home-manager switch --flake .#jon` | Standalone home-manager, for non-NixOS hosts only. Do **not** run this on diogenes — home-manager is already a NixOS module there, and a standalone switch creates a second, competing source of truth. |
 
 ## Layout
 
@@ -20,11 +20,18 @@ nix/
 ├── home/
 │   ├── default.nix             # entrypoint: username, homeDirectory, stateVersion, imports
 │   ├── common.nix              # cross-platform user config: packages, firefox, gpg, xdg, handy, fractal
-│   └── linux.nix               # linux-only user config: nix-ld env vars, restic backup
+│   ├── linux.nix               # linux-only user config: nix-ld env vars, restic backup, hyprland session
+│   └── hyprland.nix            # hyprland compositor config: keybinds, waybar, walker, hyprlock
+├── packages/                   # locally-defined derivations, exposed via overlay in flake.nix
+│   ├── lazyskills/
+│   ├── ocmonitor/
+│   └── opencode2/
 └── patches/
     ├── README.md
     └── fractal-hover-reactions.patch   # currently disabled — see nix/home/common.nix
 ```
+
+Dotfile content that is not nix-managed lives in `chezmoi/` at the repo root — see "Dotfiles vs nix" below.
 
 ## Where to edit what
 
@@ -32,21 +39,36 @@ nix/
 - **Adding/removing a user package:** `nix/home/common.nix` → `home.packages`.
 - **Changing a program module (firefox, gpg, etc.):** `nix/home/common.nix`.
 - **Changing system services (pipewire, sddm, networkmanager, etc.):** `nix/nixos/diogenes.nix`.
+- **Changing hyprland keybinds, waybar, or the lock screen:** `nix/home/hyprland.nix`.
 - **Cross-platform dotfile content (zshrc, gitconfig, nvim, alacritty):** files in `chezmoi/`. The zshrc and tmux use templates with `chezmoi.os` for os-conditional nix bits.
 - **Re-enabling the fractal patch:** uncomment the `let` block in `nix/home/common.nix` and swap `fractal` back to `fractalPatched` in the package list. See `nix/patches/README.md` for regeneration.
 
 ## Daily use
 
 ```bash
-# Full system + home update (most common — atomic, one generation)
+# Full system + home update (the one command — atomic, one generation)
 sudo nixos-rebuild switch --flake /home/jon/.dotfiles#diogenes
-
-# User-level only, no sudo (faster iteration on home config)
-home-manager switch --flake /home/jon/.dotfiles#jon
 
 # Validate flake evaluates cleanly without building
 nix flake check --no-build
+
+# Apply dotfile content changes (chezmoi/ tree — no rebuild needed)
+chezmoi apply
 ```
+
+## Dotfiles vs nix
+
+Two systems, split by what the content is:
+
+- **`nix/`** — anything declarative: installed packages, system services, program modules, compositor config.
+- **`chezmoi/`** — plain dotfile content that benefits from being a normal editable file: zshrc, gitconfig, nvim, tmux, alacritty. Applied with `chezmoi apply`, independent of a rebuild.
+
+chezmoi reads `chezmoi/` as its source directory (set by `.chezmoiroot` at the repo root). Naming conventions that matter:
+
+- `dot_foo` → `~/.foo`
+- `foo.tmpl` → Go-templated; use `{{ if eq .chezmoi.os "linux" }}` for per-OS branches
+- `executable_foo` → `~/foo` with the executable bit set. **Required for scripts and git hooks** — chezmoi ignores the git file mode, so a hook without this prefix lands as `644` and git silently skips it.
+- `chezmoi/.chezmoiignore` → templated per-host exclusions. Currently skips the Mac work-machine's `.config/opencode` and `.agents` when applying on linux.
 
 ## Adding a new machine
 

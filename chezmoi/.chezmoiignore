@@ -1,0 +1,10 @@
+{{- if eq .chezmoi.os "linux" }}
+# Mac work-machine config only.
+#
+# The Linux host runs a structurally different opencode setup (oh-my-opencode-slim,
+# @latest plugin pins) and a disjoint set of agent skills, both managed outside
+# chezmoi. The tracked copies here are the work laptop's — applying them on Linux
+# would clobber a live, unrelated configuration.
+.config/opencode
+.agents
+{{- end }}
