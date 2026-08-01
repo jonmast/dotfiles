@@ -9,7 +9,8 @@
     mako
     hyprlock
     hypridle
-    fuzzel         # app launcher (Wayland-native)
+    walker         # app launcher + clipboard history
+    elephant       # walker backend data service
     swaybg
     grim
     slurp
@@ -95,15 +96,16 @@
       # waybar is started by the HM-managed systemd user service
       # (programs.waybar.systemd.enable below) — do NOT also exec-once it,
       # or you'll get two instances fighting over the bar slot.
-      exec-once = [ ];
+      exec-once = [ "swaybg -i ~/.config/hypr/wallpaper.jpg -m fill" ];
       # $mod = SUPER (Hyprland's default $mainMod; explicit for clarity)
       "$mainMod" = "SUPER";
       bind = [
         "$mainMod, RETURN, exec, ghostty"
-        "$mainMod, D, exec, fuzzel"
+        "$mainMod, D, exec, walker"
         "$mainMod, Q, killactive"
         "$mainMod, E, exec, dolphin"
         "$mainMod, V, togglefloating"
+        "$mainMod SHIFT, V, exec, walker -m clipboard"
         "$mainMod, F, fullscreen"
         "$mainMod, P, pseudo"
         "$mainMod, J, layoutmsg, togglesplit"
@@ -176,20 +178,154 @@
       {
         layer = "top";
         position = "top";
+        height = 30;
+        margin-top = 5;
+        margin-left = 10;
+        margin-right = 10;
         modules-left = [ "hyprland/workspaces" "hyprland/window" ];
-        modules-right = [ "pulseaudio" "network" "battery" "clock" "tray" ];
+        modules-right = [ "mpris" "bluetooth" "pulseaudio" "network" "battery" "clock" "tray" ];
         clock = {
           format = "{:%a %b %d  %H:%M}";
           tooltip-format = "<tt><small>{calendar}</small></tt>";
         };
         tray = { spacing = 10; };
+        pulseaudio = {
+          format = "{icon} {volume}%";
+          format-muted = "muted";
+          format-icons = {
+            default = [ "🔊" "🔉" "🔈" ];
+          };
+        };
+        battery = {
+          format = "{icon} {capacity}%";
+          format-icons = [ "🪫" "🔋" "🔋" ];
+          format-charging = "⚡ {capacity}%";
+          states = {
+            warning = 30;
+            critical = 15;
+          };
+        };
+        mpris = {
+          format = "{player_icon} {title}";
+          format-paused = "{player_icon} {title}";
+          player-icons = {
+            default = "▶";
+            chromium = "◉";
+            mpv = "♫";
+          };
+          max-length = 40;
+        };
+        bluetooth = {
+          format = "BT {device_alias}";
+          format-connected = "BT {device_alias}";
+          format-disconnected = "BT off";
+          tooltip-format = "{device_enumerate}";
+        };
       }
     ];
     style = ''
-      * { font-family: monospace; font-size: 12px; min-height: 0; }
-      #workspaces button { padding: 0 8px; }
-      #workspaces button.focused { background: #88c0d0; color: #2e3440; }
-      #clock { padding: 0 12px; }
+      * {
+        font-family: "Sans", sans-serif;
+        font-size: 13px;
+        min-height: 0;
+      }
+
+      window#waybar {
+        background: transparent;
+        box-shadow: none;
+      }
+
+      tooltip {
+        background: #2e3440;
+        border: 1px solid #4c566a;
+        border-radius: 6px;
+        color: #d8dee9;
+      }
+
+      #workspaces button {
+        padding: 0 10px;
+        color: #4c566a;
+        background: rgba(46, 52, 64, 0.65);
+        border-radius: 6px;
+        margin: 4px 2px;
+        border: none;
+      }
+
+      #workspaces button.active,
+      #workspaces button.focused {
+        color: #2e3440;
+        background: #88c0d0;
+        border-radius: 6px;
+      }
+
+      #workspaces button:hover {
+        background: #434c5e;
+        color: #eceff4;
+      }
+
+      #window {
+        padding: 0 12px;
+        color: #d8dee9;
+        background: rgba(46, 52, 64, 0.65);
+        border-radius: 6px;
+        margin: 4px 2px;
+      }
+
+      #mpris,
+      #bluetooth,
+      #pulseaudio,
+      #network,
+      #battery,
+      #clock,
+      #tray {
+        padding: 0 12px;
+        color: #d8dee9;
+        background: rgba(46, 52, 64, 0.65);
+        border-radius: 6px;
+        margin: 4px 2px;
+      }
+
+      #mpris.playing {
+        color: #88c0d0;
+      }
+
+      #mpris.paused {
+        color: #4c566a;
+      }
+
+      #bluetooth.connected {
+        color: #a3be8c;
+      }
+
+      #bluetooth.off {
+        color: #4c566a;
+      }
+
+      #pulseaudio.muted {
+        color: #bf616a;
+      }
+
+      #network.disconnected {
+        color: #bf616a;
+      }
+
+      #battery.full,
+      #battery.charging {
+        color: #a3be8c;
+      }
+
+      #battery.warning {
+        color: #ebcb8b;
+      }
+
+      #battery.critical {
+        color: #bf616a;
+      }
+
+      #clock {
+        color: #88c0d0;
+        font-weight: bold;
+      }
     '';
   };
 
@@ -349,6 +485,43 @@
     };
     Service = {
       ExecStart = "${pkgs.mako}/bin/mako";
+      Restart = "on-failure";
+    };
+    Install.WantedBy = [ "hyprland-session.target" ];
+  };
+
+  # Walker + Elephant — Hyprland-only (Plasma has its own launcher).
+  # Elephant is the backend data service; Walker is the frontend launcher.
+  # Walker must run as a service for clipboard history to work.
+  xdg.configFile."walker/config.toml".text = ''
+    [providers]
+      [providers.sets.default]
+      default = ["desktopapplications", "runner", "clipboard"]
+      empty = ["desktopapplications"]
+  '';
+
+  systemd.user.services.elephant = {
+    Unit = {
+      Description = "Elephant data provider for Walker";
+      After = [ "hyprland-session.target" ];
+      PartOf = [ "hyprland-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.elephant}/bin/elephant";
+      Restart = "on-failure";
+    };
+    Install.WantedBy = [ "hyprland-session.target" ];
+  };
+
+  systemd.user.services.walker = {
+    Unit = {
+      Description = "Walker application launcher";
+      After = [ "hyprland-session.target" "elephant.service" ];
+      PartOf = [ "hyprland-session.target" ];
+      Requires = [ "elephant.service" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.walker}/bin/walker --gapplication-service";
       Restart = "on-failure";
     };
     Install.WantedBy = [ "hyprland-session.target" ];
