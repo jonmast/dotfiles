@@ -31,7 +31,11 @@ command = "herdr-pi-assist"
 description = "AI Assist tab toggle"
 
 [terminal]
+{{- if eq .chezmoi.os "darwin" }}
 default_shell = "/bin/zsh"
+{{- else }}
+default_shell = "{{ lookPath "zsh" }}"
+{{- end }}
 
 [ui]
 mouse_capture = true
