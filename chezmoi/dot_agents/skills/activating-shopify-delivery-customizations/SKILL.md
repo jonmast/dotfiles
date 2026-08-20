@@ -1,6 +1,6 @@
 ---
 name: activating-shopify-delivery-customizations
-description: Use when activating a Shopify delivery customization that should already exist in an app release, especially when checking function handles, delivery customization scopes, store reauthorization state, or Admin GraphQL create/activation flow without deploying.
+description: "Use when activating an already-shipped Shopify delivery customization: check function handles, delivery customization scopes, store reauthorization state, or Admin GraphQL create/activation flow without deploying."
 ---
 
 # Activating Shopify Delivery Customizations

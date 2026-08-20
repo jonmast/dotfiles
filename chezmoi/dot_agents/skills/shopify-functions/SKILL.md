@@ -1,6 +1,6 @@
 ---
 name: shopify-functions
-description: "Shopify Functions allow developers to customize the backend logic that powers parts of Shopify. Available APIs: Discount, Cart and Checkout Validation, Cart Transform, Pickup Point Delivery Option Generator, Delivery Customization, Fulfillment Constraints, Local Pickup Delivery Option Generator, Order Routing Location Rule, Payment Customization"
+description: "Shopify Functions customize backend logic. APIs: Discount, Cart & Checkout Validation, Cart Transform, Pickup Point & Local Pickup Delivery Option Generator, Delivery Customization, Fulfillment Constraints, Order Routing Location Rule, Payment Customization."
 compatibility: Requires Node.js
 metadata:
   author: Shopify

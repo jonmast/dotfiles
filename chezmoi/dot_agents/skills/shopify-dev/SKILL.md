@@ -1,6 +1,6 @@
 ---
 name: shopify-dev
-description: "Search Shopify developer documentation across all APIs. Use only when no API-specific skill applies."
+description: "Search Shopify developer docs across all APIs. Only when no API-specific skill applies."
 compatibility: Requires Node.js
 metadata:
   author: Shopify

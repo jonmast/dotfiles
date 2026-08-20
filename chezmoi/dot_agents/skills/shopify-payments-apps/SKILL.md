@@ -1,6 +1,6 @@
 ---
 name: shopify-payments-apps
-description: "The Payments Apps API enables payment providers to integrate their payment solutions with Shopify's checkout."
+description: "Payments Apps API: let payment providers integrate their payment solutions with Shopify checkout."
 compatibility: Requires Node.js
 metadata:
   author: Shopify
