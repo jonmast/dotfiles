@@ -1,10 +1,10 @@
-{{- if eq .chezmoi.os "linux" }}
-# Mac work-machine config only.
+{{- if eq .chezmoi.hostname "diogenes" }}
+# diogenes (NixOS laptop) only.
 #
-# The Linux host runs a structurally different opencode setup (oh-my-opencode-slim,
+# diogenes runs a structurally different opencode setup (oh-my-opencode-slim,
 # @latest plugin pins) and a disjoint set of agent skills, both managed outside
-# chezmoi. The tracked copies here are the work laptop's — applying them on Linux
-# would clobber a live, unrelated configuration.
+# chezmoi. The tracked copies here are for other machines — applying them on
+# diogenes would clobber a live, unrelated configuration.
 .config/opencode
 .agents
 {{- end }}
