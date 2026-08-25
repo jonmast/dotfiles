@@ -116,6 +116,10 @@ if type zoxide &> /dev/null; then
   eval "$(zoxide init zsh)"
 fi
 
+if type direnv &> /dev/null; then
+  eval "$(direnv hook zsh)"
+fi
+
 # Keybindings for history search
 bindkey '^[[A' history-substring-search-up
 bindkey '^[[B' history-substring-search-down

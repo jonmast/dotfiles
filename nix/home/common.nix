@@ -124,6 +124,12 @@ in
 
   programs.gpg.enable = true;
 
+  # direnv: auto-load per-project flake dev shells (e.g. k8s-conf .envrc).
+  programs.direnv = {
+    enable = true;
+    nix-direnv.enable = true;
+  };
+
   xdg.mime.enable = true;
   xdg.systemDirs.data = [
     "${config.home.homeDirectory}/.nix-profile/share"
