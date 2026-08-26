@@ -70,4 +70,5 @@ Good tests here assert external behavior only (what boots, what appears, what re
 ## Further Notes
 
 - Working tree on master carries unrelated WIP; cut a fresh feature branch for this work.
-- Research doc records open gaps worth watching during implementation: exact XDG_MENU_PREFIX value for NixOS, and whether quattro QML needs quickshell > 0.3.1 APIs (unlikely; validated rev predates it).
+- Research doc records open gaps worth watching during implementation: ~~exact XDG_MENU_PREFIX value for NixOS~~ (resolved — see below), and whether quattro QML needs quickshell > 0.3.1 APIs (unlikely; validated rev predates it).
+- **XDG_MENU_PREFIX resolved (2026-08-25):** the value is `plasma-`, because `plasma-applications.menu` from plasma-workspace is the only menu file on the system. uwsm otherwise derives `hyprland-` from the compositor name, which matches no file and empties the whole menu tree (`kbuildsycoca6 --menutest`: 0 entries vs 41). Fixed via `xdg.configFile."uwsm/env-hyprland"`, since uwsm force-exports the variable and would clobber `home.sessionVariables`. This was a live bug in the existing Hyprland session, independent of Plasma removal — and it means issue 02 must keep a menu file available once plasma-workspace's role is reconsidered.
