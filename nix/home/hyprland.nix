@@ -385,6 +385,8 @@
     # configPackages tells HM which packages to scan for *.portal files
     # (the desktop files that describe portal interfaces). We add
     # plasma-workspace so the KDE portal's interfaces get registered.
+    # NOTE (issue 02): re-evaluate whether plasma-workspace is still required
+    # here once the Plasma session is gone.
     configPackages = with pkgs; [
       hyprland
       kdePackages.plasma-workspace
@@ -403,6 +405,34 @@
       "org.freedesktop.impl.portal.Secret" = [ "kde" ];
     };
   };
+
+  # KDE menu prefix fix (Dolphin "Open With", sycoca).
+  #
+  # uwsm derives XDG_MENU_PREFIX from the compositor's desktop name:
+  #   XDG_MENU_PREFIX="$(lowercase "${__WM_FIRST_DESKTOP_NAME__}")-"
+  # (uwsm-0.26.6/libexec/uwsm/prepare-env.sh:177) which yields `hyprland-`.
+  # KDE then looks for `${XDG_MENU_PREFIX}applications.menu` and finds nothing:
+  # the only menu file on the system is `plasma-applications.menu`, shipped by
+  # plasma-workspace into /run/current-system/sw/etc/xdg/menus/. There is no
+  # hyprland-applications.menu anywhere, so the whole application menu tree
+  # comes back empty and Dolphin's "Open With" is unpopulated.
+  #
+  # Measured with `kbuildsycoca6 --menutest`:
+  #   XDG_MENU_PREFIX=hyprland-  ->  0 entries
+  #   XDG_MENU_PREFIX=plasma-    -> 41 entries
+  #
+  # Set via uwsm's own env-file mechanism rather than home.sessionVariables or
+  # hyprland `env =`, because uwsm force-exports XDG_MENU_PREFIX (it is in its
+  # `always_export` set) when it prepares the environment. prepare-env.sh
+  # assigns the prefix at line 177 and only THEN sources these env files
+  # (load_wm_env, line 195), so this assignment wins. It is also scoped to the
+  # Hyprland session only, so it cannot leak into the Plasma session.
+  #
+  # This is the "XDG_MENU_PREFIX corrected at the systemd layer" follow-up
+  # folded into the plan; issue 02 verifies it end-to-end via Dolphin.
+  xdg.configFile."uwsm/env-hyprland".text = ''
+    export XDG_MENU_PREFIX=plasma-
+  '';
 
   # hypridle talks to Hyprland's IPC socket — it must NOT start under Plasma
   # (or any non-Hyprland session) or it crashes immediately. Bind it to the
