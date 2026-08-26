@@ -60,6 +60,43 @@
   # dconf, and xwayland. The home-manager module on the user side is layered
   # on top of this for the user-level session target.
   programs.hyprland.enable = true;
+  # Launch Hyprland under uwsm (ADR 0003). uwsm owns graphical-session.target
+  # and the wayland-session@Hyprland.target tree, so logout tears the whole
+  # session down instead of leaking user services into the next login.
+  #
+  # withUWSM alone is sufficient. It only sets `programs.uwsm.enable`, but the
+  # uwsm session entry does NOT come from programs.uwsm.waylandCompositors —
+  # the hyprland package itself ships both sessions
+  # (`pkgs.hyprland.providedSessions == [ "hyprland" "hyprland-uwsm" ]`), and
+  # the Hyprland module already registers them via
+  # `services.displayManager.sessionPackages = [ cfg.package ]`.
+  #
+  # Do NOT re-add a waylandCompositors.hyprland entry here. It generates a
+  # second `hyprland-uwsm.desktop` that shadows the package's own (same
+  # basename, same SessionDir) with a worse Exec line:
+  #   ours:     uwsm start -F -- /run/current-system/sw/bin/Hyprland
+  #   upstream: uwsm start -e -D Hyprland hyprland.desktop
+  # Upstream delegates to hyprland.desktop, whose Exec is `start-hyprland` —
+  # the supervisor wrapper Hyprland now expects to be launched under.
+  # Launching the raw binary instead cost us two things, both observed in the
+  # session log: "Hyprland is being launched without start-hyprland. This is
+  # highly advised against." and "Failed to change process scheduling
+  # strategy" — the latter because security.wrappers.Hyprland holds
+  # cap_sys_nice+ep at /run/wrappers/bin/Hyprland and the store path does not.
+  # start-hyprland resolves the compositor with execvp (verified via `nm -D`),
+  # so PATH decides: /run/wrappers/bin precedes /run/current-system/sw/bin in
+  # both the login and systemd-user environments, hence the caps are picked up.
+  # Note it does NOT auto-restart on crash — probed with stub binaries exiting
+  # 0, exiting 1, and SIGSEGV; all three produced exactly one invocation and
+  # logged "Hyprland exit cleanly". So there is no supervision conflict with
+  # uwsm's wayland-wm@Hyprland.service, and no crash-loop risk either.
+  programs.hyprland.withUWSM = true;
+  # Plasma stays for now as the fallback session while uwsm is de-risked
+  # (issue 01 adds/rewires only; issue 02 removes Plasma).
+  #
+  # NOTE: programs.uwsm.enable forces services.dbus.implementation = "broker"
+  # system-wide, so the Plasma session gets dbus-broker too. Override with
+  # `services.dbus.implementation = lib.mkForce "dbus"` if that regresses.
   services.desktopManager.plasma6.enable = true;
 
   services.xserver.xkb = {

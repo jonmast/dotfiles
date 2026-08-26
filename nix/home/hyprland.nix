@@ -38,15 +38,46 @@
     polkit
   ];
 
-  # Leak-prevention TODO (v1.1): HM's wayland.windowManager.hyprland starts
-  # hyprland-session.target but never stops it on logout. For v1 we accept
-  # that waybar/mako may persist into the next Plasma login (cosmetic —
-  # `pkill waybar` clears it; hypridle is already on hyprland-session.target
-  # so it won't start under Plasma).
+  # Leak-prevention (was a v1.1 TODO, fixed structurally by uwsm — ADR 0003):
+  # HM starts hyprland-session.target but never stops it on logout, so waybar
+  # and friends used to persist into the next login. Under uwsm, uwsm owns
+  # graphical-session.target; hyprland-session.target declares
+  # `BindsTo=graphical-session.target`, so when uwsm stops graphical-session on
+  # logout the stop propagates down to hyprland-session.target and on to every
+  # `PartOf=` service below. Verified experimentally with probe units.
+  #
+  # The five Hyprland-scoped services therefore stay bound to
+  # hyprland-session.target rather than moving to graphical-session.target
+  # directly: Plasma ALSO activates graphical-session.target, so a literal
+  # rebind would start waybar/mako/hypridle under Plasma during the
+  # dual-session window (hypridle would crash-loop with no Hyprland IPC).
+  # Revisit in issue 02 once Plasma is gone.
   wayland.windowManager.hyprland = {
     enable = true;
     package = pkgs.hyprland;
     portalPackage = pkgs.xdg-desktop-portal-hyprland;
+    # systemd.enable stays true: it emits the `dbus-update-activation-environment`
+    # exec-once that plumbs WAYLAND_DISPLAY / HYPRLAND_INSTANCE_SIGNATURE etc.
+    # into the systemd + D-Bus activation environments, and defines
+    # hyprland-session.target itself.
+    #
+    # extraCommands drops the leading `stop` under uwsm. The default is
+    #   [ "systemctl --user stop hyprland-session.target"
+    #     "systemctl --user start hyprland-session.target" ]
+    # appended to that exec-once line. hyprland-session.target carries
+    # `PropagatesStopTo=graphical-session.target`, and systemd propagates a
+    # stop even when the target is currently INACTIVE (verified with probe
+    # units). Under uwsm graphical-session.target is already active at that
+    # point, so the default `stop` would tear down graphical-session →
+    # wayland-session@Hyprland.target → the compositor itself, at login.
+    # This is almost certainly the "naive attempt broke booting" in ADR 0003.
+    #
+    # The `start` MUST stay. BindsTo is directional — it makes
+    # hyprland-session.target require graphical-session.target, but starting
+    # graphical-session.target does NOT pull hyprland-session.target up. Drop
+    # the start and waybar/mako/hypridle/walker/elephant never launch.
+    # Verified both directions with probe units.
+    systemd.extraCommands = [ "systemctl --user start hyprland-session.target" ];
     # hyprlang (legacy default) — our config is written in hyprlang syntax.
     # Lua mode is a v1.1+ option; switching now broke the config parse
     # ("emergency mode" on the bare session attempt). Set explicitly to
