@@ -42,7 +42,7 @@ Hyprland becomes the single SDDM session, launched under uwsm. A self-written mi
 - **Scope tier T3**: bar + menu launcher + notifications + vol/brightness OSDs + polkit agent. Lock/idle explicitly excluded (ADR 0004).
 - **Bar parity** first release: same modules left/right, same Nord palette, calendar tooltip included.
 - **Plasma out** (ADR 0002): drop plasma6 desktop manager and xserver; SDDM (wayland) remains with Hyprland-only entry. kwallet + kwallet-pam PAM wiring, portal-kde Secret routing, kdeconnect, kate all stay standalone. Re-check whether plasma-workspace is still needed in portal configPackages once Plasma is gone.
-- **uwsm** (ADR 0003): system uwsm enabled, HM integration on; all Hyprland-scoped user services rebind hyprland-session.target → graphical-session.target. Landing order inside this work: add uwsm while Plasma still present and verify boot before removing Plasma.
+- **uwsm** (ADR 0003): system uwsm enabled, HM integration on; all Hyprland-scoped user services rebind hyprland-session.target → graphical-session.target. Landing order inside this work: add uwsm while Plasma still present and verify boot before removing Plasma. **Amended during issue 01:** the rebind is deferred to issue 02 — while Plasma still exists it would start waybar/mako/hypridle under Plasma, so services stay on hyprland-session.target, which `BindsTo=graphical-session.target` and so still stops cleanly on logout. See ADR 0003's amendments.
 - **Walker stack demotion** (CONTEXT.md): elephant + walker services remain solely for clipboard history; the launcher role moves to The Shell's menu via quickshell IPC.
 - **Quickshell source**: upstream flake input pinned v0.3.1 with nixpkgs follows (nixpkgs unstable still at 0.3.0 which has a restart-kill race; PR #554917 pending). Drop the pin after nixpkgs bumps.
 - **Known follow-ups folded in**: baloo disabled; XDG_MENU_PREFIX corrected at the systemd layer for Dolphin sycoca.
@@ -53,7 +53,7 @@ Four seams, agreed with jon; a ticket is done when eval is clean AND its slice o
 
 1. **Eval seam** (agent-runnable): `nix flake check` / dry-build — module errors caught before any reboot.
 2. **Boot seam** (human): SDDM lists one session; uwsm-launched Hyprland reaches a usable desktop.
-3. **Session seam** (human, post-login): `systemctl --user` shows all expected services active under graphical-session.target; none lingering from retired targets.
+3. **Session seam** (human, post-login): `systemctl --user` shows all expected services active under graphical-session.target; none lingering from retired targets. Until issue 02 collapses the indirection, they appear one level down under hyprland-session.target — check with `systemctl --user list-dependencies`. The leak test that matters is a logout→re-login cycle followed by `pgrep -a 'waybar|mako|hypridle|walker|elephant'` (want one of each), not a single-boot snapshot.
 4. **Shell seam** (human, interactive): keybind/menu/clipboard/notifications/OSD/polkit/bar-parity checklist per the user stories above.
 
 Good tests here assert external behavior only (what boots, what appears, what responds) — never module internals. Prior art: the manual verification approach of the previous plan doc (`docs/plans/hyprland-as-alternate-to-kwin.md`).
