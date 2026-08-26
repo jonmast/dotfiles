@@ -24,6 +24,15 @@
   networking.hostName = "diogenes";
   networking.networkmanager.enable = true;
 
+  # Automatic garbage collection: weekly, keep everything newer than 30 days
+  # (conservative — 30d of rollback points, then prune).
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 30d";
+  };
+  nix.settings.auto-optimise-store = true;
+
   # Set your time zone.
   time.timeZone = "America/New_York";
 
@@ -161,11 +170,12 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  # Silence the x86_64-darwin deprecation warning emitted transitively by a
-  # flake input (Handy → bun2nix) that enumerates darwin systems. Official
-  # opt-in knob; propagates through the nixpkgs `follows` chain. This Linux
-  # host never builds darwin, so the warning is pure noise.
-  nixpkgs.config.allowDeprecatedx86_64Darwin = true;
+  # Silence the x86_64-darwin deprecation error emitted transitively by a
+  # flake input (Handy → bun2nix) that enumerates darwin systems. This Linux
+  # host never builds darwin, so it is pure noise.
+  # nixpkgs 26.11 turned the old warning into a hard throw; `true` (the
+  # 26.05 warning-silencer) no longer works — only the string "force" does.
+  nixpkgs.config.allowDeprecatedx86_64Darwin = "force";
 
   environment.systemPackages = with pkgs; [
   ];

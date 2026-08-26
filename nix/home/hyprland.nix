@@ -19,6 +19,7 @@
     playerctl      # media key control
     brightnessctl  # brightness key control
     wireplumber    # provides wpctl for audio key control
+    jq             # JSON parsing for waybar custom scripts
     xdg-desktop-portal-hyprland
     xdg-desktop-portal-gtk
     # KDE portal + kwallet so apps that use libsecret (Chrome, mpv scripts,
@@ -69,6 +70,8 @@
         # so the touchpad stays active when typing into Moonlight's
         # streamed window — the kernel's i2c-hid palm-rejection can
         # otherwise leave the pad unresponsive for ~1s after every key.
+        # Toggle with $mainMod+T or the waybar DWT button to enable
+        # disable_while_typing for apps like Ghostty (phantom clicks).
         touchpad = {
           natural_scroll = true;
           disable_while_typing = false;
@@ -136,6 +139,7 @@
         "$mainMod SHIFT, 8, movetoworkspace, 8"
         "$mainMod SHIFT, 9, movetoworkspace, 9"
         "$mainMod SHIFT, E, exit"
+        "$mainMod, T, exec, hyprctl keyword input:touchpad:disable_while_typing $(if [ \"$(hyprctl getoption input:touchpad:disable_while_typing -j | jq -r .bool)\" = 'false' ]; then echo true; else echo false; fi)"
         ", Print, exec, grim -g \"$(slurp)\" - | wl-copy"
       ];
       bindl = [
@@ -183,7 +187,7 @@
         margin-left = 10;
         margin-right = 10;
         modules-left = [ "hyprland/workspaces" "hyprland/window" ];
-        modules-right = [ "mpris" "bluetooth" "pulseaudio" "network" "battery" "clock" "tray" ];
+        modules-right = [ "custom/dwt" "bluetooth" "pulseaudio" "network" "battery" "clock" "tray" ];
         clock = {
           format = "{:%a %b %d  %H:%M}";
           tooltip-format = "<tt><small>{calendar}</small></tt>";
@@ -205,21 +209,23 @@
             critical = 15;
           };
         };
-        mpris = {
-          format = "{player_icon} {title}";
-          format-paused = "{player_icon} {title}";
-          player-icons = {
-            default = "▶";
-            chromium = "◉";
-            mpv = "♫";
-          };
-          max-length = 40;
-        };
         bluetooth = {
           format = "BT {device_alias}";
           format-connected = "BT {device_alias}";
           format-disconnected = "BT off";
           tooltip-format = "{device_enumerate}";
+        };
+        "custom/dwt" = {
+          return-type = "json";
+          exec = pkgs.writeShellScript "dwt-status" ''
+            val=$(hyprctl getoption input:touchpad:disable_while_typing -j | jq -r .bool)
+            if [ "$val" = "true" ]; then
+              echo '{"text":"DWT on","class":"dwt-on","tooltip":"Disable-while-typing ON (click to disable)"}'
+            else
+              echo '{"text":"DWT off","class":"dwt-off","tooltip":"Disable-while-typing OFF (click to enable)"}'
+            fi
+          '';
+          interval = 5;
         };
       }
     ];
@@ -271,7 +277,7 @@
         margin: 4px 2px;
       }
 
-      #mpris,
+      #custom-dwt,
       #bluetooth,
       #pulseaudio,
       #network,
@@ -285,12 +291,12 @@
         margin: 4px 2px;
       }
 
-      #mpris.playing {
-        color: #88c0d0;
+      #custom-dwt.dwt-on {
+        color: #a3be8c;
       }
 
-      #mpris.paused {
-        color: #4c566a;
+      #custom-dwt.dwt-off {
+        color: #bf616a;
       }
 
       #bluetooth.connected {

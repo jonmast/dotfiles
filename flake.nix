@@ -25,6 +25,12 @@
     handy = {
       url = "github:cjpais/Handy";
       inputs.nixpkgs.follows = "nixpkgs";
+      # bun2nix (Handy's dependency) runs its flake-parts modules for every
+      # system in github:nix-systems/default, including x86_64-darwin. Those
+      # evaluations hit nixpkgs.legacyPackages.x86_64-darwin, which nixpkgs
+      # 26.11 hard-throws on — and nixpkgs.config can't reach that instance.
+      # Restrict bun2nix to this host's system so they never happen.
+      inputs.bun2nix.inputs.systems.url = "github:nix-systems/x86_64-linux";
     };
 
     # Hermes Agent (Nous Research). Official flake: provides the `hermes`

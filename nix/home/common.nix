@@ -45,6 +45,7 @@ in
     fractalPatched  # patch enabled — see top of file
     freecad-wayland
     fzf
+    gdu
     ghostty
     gh
     git
@@ -54,6 +55,7 @@ in
     k9s
     kdePackages.kdeconnect-kde
     lazyskills
+    magic-context-dashboard
     kubeconform
     kubectl
     kubectl-cnpg
@@ -69,8 +71,10 @@ in
     nmap
     nodejs
     ocmonitor
+    omniroute
     opencode2
     orca-slicer
+    pi-coding-agent
     pv-migrate
     python3
     restic
