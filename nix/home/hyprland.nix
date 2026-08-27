@@ -23,11 +23,15 @@
     xdg-desktop-portal-hyprland
     xdg-desktop-portal-gtk
     # KDE portal + kwallet so apps that use libsecret (Chrome, mpv scripts,
-    # etc.) get a Secret Service backend in the Hyprland session. Under
-    # Plasma these come from services.desktopManager.plasma6.enable; under
-    # Hyprland we have to install them ourselves. kwallet-pam also ships
-    # the pam_kwallet_init autostart helper that launches the wallet daemon
-    # at session start.
+    # etc.) get a Secret Service backend. These used to also arrive via
+    # services.desktopManager.plasma6.enable; since issue 02 removed Plasma,
+    # these declarations are the ONLY thing installing them. kwallet ships
+    # `kwallet.portal`, which is what actually registers the
+    # org.freedesktop.impl.portal.Secret interface (NOT plasma-workspace — see
+    # the xdg.portal.configPackages note below). kwallet-pam ships the
+    # pam_kwallet_init autostart helper that launches the wallet daemon at
+    # session start; its PAM wiring lives in nix/nixos/diogenes.nix
+    # (security.pam.services.sddm.kwallet) and is independent of Plasma.
     #
     # NOTE: kwallet cannot be unlocked by fingerprint — the NixOS wiki is
     # explicit. We accept the password prompt on wallet open; the wallet
@@ -46,12 +50,26 @@
   # logout the stop propagates down to hyprland-session.target and on to every
   # `PartOf=` service below. Verified experimentally with probe units.
   #
-  # The five Hyprland-scoped services therefore stay bound to
-  # hyprland-session.target rather than moving to graphical-session.target
-  # directly: Plasma ALSO activates graphical-session.target, so a literal
-  # rebind would start waybar/mako/hypridle under Plasma during the
-  # dual-session window (hypridle would crash-loop with no Hyprland IPC).
-  # Revisit in issue 02 once Plasma is gone.
+  # Issue 02 collapsed the target indirection. During the dual-session window
+  # the five services had to stay on hyprland-session.target, because Plasma
+  # also activates graphical-session.target and a literal rebind would have
+  # started waybar/mako/hypridle under Plasma (hypridle crash-loops with no
+  # Hyprland IPC). Plasma is gone, so they now bind directly to
+  # graphical-session.target as ADR 0003 originally called for.
+  #
+  # Ordering is safe under uwsm: wayland-wm@.service is `Type=notify` and
+  # declares `Before=graphical-session.target`, so the target is only reached
+  # once the compositor has signalled ready via `uwsm finalize` — which is also
+  # what exports HYPRLAND_INSTANCE_SIGNATURE into the systemd user environment.
+  # So hypridle/waybar always find a live Hyprland IPC socket.
+  #
+  # hyprland-session.target still exists (HM defines it) and is still started by
+  # the exec-once below, but nothing is bound to it any more. It retains exactly
+  # one job: in the NON-uwsm escape-hatch session, nothing else would ever
+  # activate graphical-session.target, and `BindsTo=` implies `Requires=`, so
+  # starting hyprland-session.target pulls graphical-session.target up and the
+  # five services come with it. Drop that exec-once and the escape-hatch session
+  # boots to a bare compositor with no bar or notifications.
   wayland.windowManager.hyprland = {
     enable = true;
     package = pkgs.hyprland;
@@ -117,8 +135,11 @@
         border_size = 2;
       };
       decoration = { rounding = 8; };
-      # Compositor-specific env vars (NOT in home.sessionVariables — that
-      # would leak into the Plasma session and break it).
+      # Compositor-specific env vars. Kept here rather than in
+      # home.sessionVariables so they stay scoped to a Hyprland session (the
+      # original reason was to avoid leaking into Plasma; Plasma is gone, but
+      # scoping them to the compositor is still the right shape — they are
+      # wrong for a TTY or a non-Hyprland login).
       env = [
         "QT_QPA_PLATFORM,wayland;xcb"
         "GDK_BACKEND,wayland,x11"
@@ -194,15 +215,16 @@
     };
   };
 
-  # Waybar is Hyprland-only. Bind its service to hyprland-session.target so it
-  # never starts (or lingers) under Plasma. programs.waybar.systemd.enable
-  # generates the unit; this override retargets its lifecycle.
+  # programs.waybar.systemd.enable generates the unit; this override retargets
+  # its lifecycle onto graphical-session.target (see the note at the top of this
+  # file — Hyprland is now the only session, so the extra indirection through
+  # hyprland-session.target is gone).
   systemd.user.services.waybar = {
     Unit = {
-      After = [ "hyprland-session.target" ];
-      PartOf = [ "hyprland-session.target" ];
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
     };
-    Install.WantedBy = [ "hyprland-session.target" ];
+    Install.WantedBy = [ "graphical-session.target" ];
   };
 
   programs.waybar = {
@@ -382,11 +404,37 @@
       kdePackages.xdg-desktop-portal-kde
       xdg-desktop-portal-gtk
     ];
-    # configPackages tells HM which packages to scan for *.portal files
-    # (the desktop files that describe portal interfaces). We add
-    # plasma-workspace so the KDE portal's interfaces get registered.
-    # NOTE (issue 02): re-evaluate whether plasma-workspace is still required
-    # here once the Plasma session is gone.
+    # configPackages: RESOLVED for issue 02 — plasma-workspace stays, but not
+    # for the reason the old comment here gave.
+    #
+    # The old comment claimed configPackages makes HM "scan packages for
+    # *.portal files" so "the KDE portal's interfaces get registered". That is
+    # wrong. HM's module (modules/misc/xdg/portal.nix) does exactly one thing
+    # with this list:
+    #     home.packages = packages ++ cfg.configPackages;
+    # i.e. it just INSTALLS the package. Portal interfaces are registered by the
+    # *.portal files in extraPortals' own outputs — the Secret interface we care
+    # about comes from `kwallet.portal` (shipped by kdePackages.kwallet, already
+    # in home.packages above), not from plasma-workspace.
+    #
+    # So plasma-workspace is NOT load-bearing for portals. It IS load-bearing
+    # for the application menu, which is why it stays: it is the only package on
+    # the system shipping
+    #     etc/xdg/menus/plasma-applications.menu
+    # plus the 40 share/desktop-directories/*.directory files that menu
+    # references. XDG_MENU_PREFIX=plasma- (set below) resolves to exactly that
+    # file. Drop plasma-workspace and Dolphin's "Open With → Other Application"
+    # tree goes empty again regardless of the prefix.
+    #
+    # Keeping it in configPackages (rather than home.packages) is deliberate:
+    # both routes install it identically, and this one keeps it adjacent to the
+    # portal config it used to be justified by. Verified by building
+    # home.path with and without Plasma — byte-identical store path, menu file
+    # and .directory files present in both.
+    #
+    # Its Plasma autostart entries (plasmashell, xembedsniproxy, ...) are all
+    # `OnlyShowIn=KDE` and XDG_CURRENT_DESKTOP is Hyprland, so installing the
+    # package does not start any Plasma daemon.
     configPackages = with pkgs; [
       hyprland
       kdePackages.plasma-workspace
@@ -425,21 +473,25 @@
   # hyprland `env =`, because uwsm force-exports XDG_MENU_PREFIX (it is in its
   # `always_export` set) when it prepares the environment. prepare-env.sh
   # assigns the prefix at line 177 and only THEN sources these env files
-  # (load_wm_env, line 195), so this assignment wins. It is also scoped to the
-  # Hyprland session only, so it cannot leak into the Plasma session.
+  # (load_wm_env, line 195), so this assignment wins.
   #
   # This is the "XDG_MENU_PREFIX corrected at the systemd layer" follow-up
   # folded into the plan; issue 02 verifies it end-to-end via Dolphin.
+  #
+  # NOTE (issue 02): this only works while plasma-workspace remains installed —
+  # it is the sole provider of plasma-applications.menu and the .directory files
+  # that menu references. See the xdg.portal.configPackages note above, which is
+  # what keeps it in the profile. Caveat: uwsm env files are read by uwsm only,
+  # so in the non-uwsm escape-hatch session the prefix reverts to the KDE
+  # default and the "Open With" tree is empty there. Acceptable — that session
+  # exists to get a shell up and rebuild, not for daily use.
   xdg.configFile."uwsm/env-hyprland".text = ''
     export XDG_MENU_PREFIX=plasma-
   '';
 
-  # hypridle talks to Hyprland's IPC socket — it must NOT start under Plasma
-  # (or any non-Hyprland session) or it crashes immediately. Bind it to the
-  # per-session target that the wayland.windowManager.hyprland module creates
-  # only when a Hyprland session is active.
-  # hypridle also requires a config file — without ~/.config/hypr/hypridle.conf
-  # it aborts with "Could not find config...". Ship a default via xdg.configFile.
+  # hypridle requires a config file — without ~/.config/hypr/hypridle.conf it
+  # aborts with "Could not find config...". Ship a default via xdg.configFile.
+  # (Its unit definition and target binding are further down.)
   xdg.configFile."hypr/hypridle.conf".text = ''
     general {
         lock_cmd = pidof hyprlock || hyprlock        # avoid multiple hyprlock instances.
@@ -528,38 +580,37 @@
     }
   '';
 
+  # hypridle talks to Hyprland's IPC socket. Safe on graphical-session.target
+  # under uwsm: the compositor has already signalled ready (and exported
+  # HYPRLAND_INSTANCE_SIGNATURE) before that target is reached.
   systemd.user.services.hypridle = {
     Unit = {
       Description = "Hyprland idle daemon";
-      After = [ "hyprland-session.target" ];
-      PartOf = [ "hyprland-session.target" ];
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
     };
     Service = {
       ExecStart = "${pkgs.hypridle}/bin/hypridle";
       Restart = "on-failure";
     };
-    Install.WantedBy = [ "hyprland-session.target" ];
+    Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  # Mako is Hyprland-only — Plasma has its own notification daemon
-  # (kded6/plasma-workspace), so we don't want mako leaking into the
-  # Plasma session. Bind it to hyprland-session.target like hypridle.
   systemd.user.services.mako = {
     Unit = {
       Description = "Mako notification daemon (Hyprland)";
-      After = [ "hyprland-session.target" ];
-      PartOf = [ "hyprland-session.target" ];
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
     };
     Service = {
       ExecStart = "${pkgs.mako}/bin/mako";
       Restart = "on-failure";
     };
-    Install.WantedBy = [ "hyprland-session.target" ];
+    Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  # Walker + Elephant — Hyprland-only (Plasma has its own launcher).
-  # Elephant is the backend data service; Walker is the frontend launcher.
-  # Walker must run as a service for clipboard history to work.
+  # Walker + Elephant. Elephant is the backend data service; Walker is the
+  # frontend launcher. Walker must run as a service for clipboard history.
   xdg.configFile."walker/config.toml".text = ''
     [providers]
       [providers.sets.default]
@@ -570,27 +621,27 @@
   systemd.user.services.elephant = {
     Unit = {
       Description = "Elephant data provider for Walker";
-      After = [ "hyprland-session.target" ];
-      PartOf = [ "hyprland-session.target" ];
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
     };
     Service = {
       ExecStart = "${pkgs.elephant}/bin/elephant";
       Restart = "on-failure";
     };
-    Install.WantedBy = [ "hyprland-session.target" ];
+    Install.WantedBy = [ "graphical-session.target" ];
   };
 
   systemd.user.services.walker = {
     Unit = {
       Description = "Walker application launcher";
-      After = [ "hyprland-session.target" "elephant.service" ];
-      PartOf = [ "hyprland-session.target" ];
+      After = [ "graphical-session.target" "elephant.service" ];
+      PartOf = [ "graphical-session.target" ];
       Requires = [ "elephant.service" ];
     };
     Service = {
       ExecStart = "${pkgs.walker}/bin/walker --gapplication-service";
       Restart = "on-failure";
     };
-    Install.WantedBy = [ "hyprland-session.target" ];
+    Install.WantedBy = [ "graphical-session.target" ];
   };
 }

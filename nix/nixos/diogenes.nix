@@ -51,10 +51,30 @@
     LC_TIME = "en_US.UTF-8";
   };
 
-  # X11 + KDE Plasma
-  services.xserver.enable = true;
+  # Display manager. SDDM on wayland; Hyprland is the only desktop (issue 02
+  # removed the Plasma session — see ADR 0002).
+  #
+  # services.xserver.enable stays FALSE: nothing here needs an X server. Xwayland
+  # comes from programs.hyprland.enable (its own `xwayland.enable`), not from
+  # services.xserver, and SDDM asserts only `xserver.enable || wayland.enable`.
+  # Dropping it also drops the `plasmax11.desktop` X session entry.
+  #
+  # NOTE: services.xserver.xkb (below) is still read — the weston greeter
+  # generates its keymap from it — so that block must NOT be removed with this.
   services.displayManager.sddm.enable = true;
   services.displayManager.sddm.wayland.enable = true;
+  # The greeter's own compositor. plasma6 used to set this to kwin via mkDefault
+  # (nixos/modules/services/desktop-managers/plasma6.nix); with plasma6 gone the
+  # module default `weston` applies. Left at the default deliberately — kwin is
+  # otherwise a Plasma-only dependency and keeping it just for the greeter would
+  # retain most of what this ticket set out to remove.
+  #
+  # If the greeter ever misbehaves, `services.displayManager.sddm.wayland.compositor
+  # = "kwin"` restores the old behaviour (and pulls kdePackages.kwin back in).
+  #
+  # Two session entries are offered (see the sessionPackages note below), so
+  # SDDM needs to know which to preselect; plasma6 used to set this to "plasma".
+  services.displayManager.defaultSession = "hyprland-uwsm";
   # Use the canonical NixOS Hyprland module — it adds the desktop session
   # entry AND wires polkit, xdg-desktop-portal-hyprland, graphics, fonts,
   # dconf, and xwayland. The home-manager module on the user side is layered
@@ -91,14 +111,34 @@
   # logged "Hyprland exit cleanly". So there is no supervision conflict with
   # uwsm's wayland-wm@Hyprland.service, and no crash-loop risk either.
   programs.hyprland.withUWSM = true;
-  # Plasma stays for now as the fallback session while uwsm is de-risked
-  # (issue 01 adds/rewires only; issue 02 removes Plasma).
+
+  # Two SDDM entries, deliberately (issue 02).
+  #
+  # pkgs.hyprland ships BOTH sessions (`providedSessions == [ "hyprland"
+  # "hyprland-uwsm" ]`) and programs.hyprland registers the package via
+  # services.displayManager.sessionPackages, so reducing SDDM to a single entry
+  # would mean filtering that list. We deliberately do NOT: with Plasma gone,
+  # the plain `hyprland.desktop` entry is the last in-SDDM fallback if uwsm
+  # itself breaks. The remaining fallbacks below it are NixOS generation
+  # rollback and `master` (55528b8).
+  #
+  # `hyprland.desktop` must stay resolvable for a second reason anyway: the
+  # uwsm entry's Exec delegates to it BY NAME
+  #   uwsm start -e -D Hyprland hyprland.desktop
+  # which uwsm looks up in wayland-sessions across XDG_DATA_DIRS.
+  #
+  # defaultSession (above) preselects the uwsm entry, so the escape hatch costs
+  # nothing at login time.
   #
   # NOTE: programs.uwsm.enable forces services.dbus.implementation = "broker"
-  # system-wide, so the Plasma session gets dbus-broker too. Override with
-  # `services.dbus.implementation = lib.mkForce "dbus"` if that regresses.
-  services.desktopManager.plasma6.enable = true;
+  # system-wide (still "broker" after Plasma removal — verified by eval). If that
+  # ever regresses something, override with
+  # `services.dbus.implementation = lib.mkForce "dbus"`.
 
+  # xkb config for the console and the SDDM greeter. NOT tied to
+  # services.xserver.enable — the weston greeter reads these values to generate
+  # its keymap (see compositorCmds.weston in the sddm module), so this stays
+  # even though the X server itself is disabled.
   services.xserver.xkb = {
     layout = "us";
     variant = "";
@@ -197,6 +237,25 @@
     extraGroups = [ "networkmanager" "wheel" "audio" "podman" "dialout" ];
     packages = with pkgs; [
       kdePackages.kate
+      # Everything below was previously installed as a side effect of
+      # services.desktopManager.plasma6.enable (its `optionalPackages` /
+      # `requiredPackages` lists). Plasma is gone as of issue 02, so the KDE
+      # software we actually use has to be declared explicitly — ADR 0002
+      # ("KDE software is retained standalone").
+      #
+      # dolphin: bound to $mainMod+E in nix/home/hyprland.nix. It was never
+      # declared anywhere in this repo before — it came in purely via plasma6.
+      kdePackages.dolphin
+      # kservice: provides kbuildsycoca6, which builds the KDE service/menu
+      # cache that Dolphin's "Open With → Other Application" tree renders from.
+      # Also the tool the XDG_MENU_PREFIX work is verified with
+      # (`kbuildsycoca6 --menutest`).
+      kdePackages.kservice
+      # Theming. plasma6 pulled in breeze-icons + the Qt style; without them
+      # KDE apps fall back to the bare `hicolor` theme and render with missing
+      # icons. Not a Plasma session dependency — just app-level presentation.
+      kdePackages.breeze-icons
+      kdePackages.qqc2-desktop-style
     ];
   };
 

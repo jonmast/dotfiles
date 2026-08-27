@@ -39,3 +39,27 @@ Also note `programs.hyprland.withUWSM = true` is sufficient on its own; do NOT a
 a `programs.uwsm.waylandCompositors` entry for Hyprland. See issue 01 for why
 (it shadows the package's own session entry and loses `start-hyprland` +
 `cap_sys_nice`).
+
+## Implementation amendments (2026-08-26, issue 02)
+
+1. **Amendment 1 above is now discharged — the rebind happened.** With Plasma
+   gone, waybar/mako/hypridle/walker/elephant bind directly to
+   `graphical-session.target` as the original decision called for. Ordering is
+   safe because `wayland-wm@.service` is `Type=notify` and declares
+   `Before=graphical-session.target`, so the target is only reached after the
+   compositor signals ready via `uwsm finalize` — which is also what exports
+   `HYPRLAND_INSTANCE_SIGNATURE`. hypridle therefore always finds a live IPC socket.
+
+2. **`hyprland-session.target` is retained but nothing binds to it.** It keeps one
+   job: in the non-uwsm escape-hatch session nothing else activates
+   `graphical-session.target`, and `BindsTo=` implies `Requires=`, so the
+   `exec-once` start of `hyprland-session.target` pulls `graphical-session.target`
+   up and the five services with it. Verified with probe units in both directions:
+   starting only the hypr target activates graphical + its bound service; stopping
+   the graphical target tears all three down.
+
+3. **Consequence line above corrected.** "SDDM shows exactly one session entry
+   after Plasma removal" is no longer accurate — issue 02 deliberately kept the
+   plain `hyprland.desktop` entry as an in-SDDM escape hatch, so there are two.
+   `services.displayManager.defaultSession = "hyprland-uwsm"` preselects the right
+   one. See ADR 0002's amendment.
