@@ -82,3 +82,29 @@ all found by building the post-removal system and diffing it against the live on
    Watch for: pam_kwallet5 is compiled to exec **`ksecretd`**, not `kwalletd6`
    (both ship in `kdePackages.kwallet`). If wallet unlock regresses after a KDE
    bump, check that binary first.
+
+7. **The PAM half alone does nothing — the session half was also missing.**
+   `pam_kwallet5` only creates `$XDG_RUNTIME_DIR/kwallet5.socket` and forks
+   `ksecretd --pam-login`, which then blocks, owning no D-Bus name, until
+   something pipes the session environment into that socket. That something is
+   `pam_kwallet_init`, shipped as the **static** unit
+   `plasma-kwallet-pam.service` (`PartOf=graphical-session.target`, no
+   `[Install]`) — pulled in by plasma-workspace under Plasma, by nothing after
+   this ADR. The autostart `.desktop` is not a fallback: it sets
+   `X-systemd-skip=true` so systemd's generator ignores it deliberately.
+
+   This is the general shape of the risk this ADR accepted in consequence #2
+   ("anything plasma-workspace silently provided must now be explicit") — the
+   surprise is that it extends to *static systemd units* the Plasma session
+   pulled in, not just packages and agents. Worth checking for others.
+
+   Declared in `nix/home/hyprland.nix` as a HM unit shadowing the upstream name,
+   with the `After=graphical-session.target` upstream omits, since the piped env
+   is only useful once uwsm has populated the manager environment.
+
+   Verification trap, recorded because it consumed real time: right after login
+   the Secret Service reports the collection `Locked = true` even when the
+   wallet is open, because the fdo collection objects are built before
+   `pamOpen()` runs and their handle is stale. The first client `Unlock`
+   completes instantly with no dialog and flips it. Test the round-trip, never
+   the raw property.
