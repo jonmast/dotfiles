@@ -388,10 +388,60 @@
     '';
   };
 
-  # kwallet-pam ships pam_kwallet_init.desktop; the systemd-xdg-autostart
-  # generator (under graphical-session.target) only honors it when this is
-  # on. Without it, the wallet never unlocks on Hyprland session start.
+  # Needed for kdeconnect (app-org.kde.kdeconnect.daemon@autostart.service) and
+  # the other XDG autostart entries.
+  #
+  # It does NOT unlock kwallet, which is what the comment here used to claim.
+  # kwallet-pam's `pam_kwallet_init.desktop` sets `X-systemd-skip=true`, so
+  # systemd's xdg-autostart generator deliberately ignores it — upstream ships
+  # `plasma-kwallet-pam.service` for that job instead. Verified: no
+  # `pam_kwallet*` unit is generated while three other autostart entries are.
+  # See the kwallet unlock service below for the wiring that actually works.
   xdg.autostart.enable = true;
+
+  # KWallet auto-unlock, session half. The login half lives in
+  # nix/nixos/diogenes.nix (`security.pam.services.login.kwallet.enable`):
+  # pam_kwallet5 takes the typed password, creates
+  # $XDG_RUNTIME_DIR/kwallet5.socket, and forks `ksecretd --pam-login` which
+  # then BLOCKS — it owns no D-Bus name and does nothing until someone pipes
+  # the session environment into that socket. `pam_kwallet_init` is what pipes
+  # it (literally `env | socat STDIN UNIX-CONNECT:$PAM_KWALLET5_LOGIN`).
+  #
+  # Upstream ships this as `plasma-kwallet-pam.service`, but that unit is
+  # `static` — `PartOf=graphical-session.target` with no `[Install]` section —
+  # so under Plasma it was plasma-workspace that pulled it in. With the Plasma
+  # session gone (ADR 0002) nothing does, and the symptom is subtle: login
+  # succeeds, the PAM daemon sits idle forever, and the first secret lookup
+  # dbus-activates a SECOND, passwordless ksecretd which grabs
+  # org.freedesktop.secrets and prompts. That second daemon logs
+  # "Lacking a socket, pipe: 0 env: 0" — the tell that this service didn't run.
+  #
+  # We shadow the upstream unit name rather than symlinking it into
+  # graphical-session.target.wants, so that `systemctl --user cat` shows what
+  # actually runs, and so we can add the `After=` upstream omits: the piped env
+  # is only useful once uwsm has populated the manager environment (that is
+  # where PAM_KWALLET5_LOGIN comes from), which is done by the time
+  # graphical-session.target is reached.
+  #
+  # Type=oneshot, not upstream's Type=simple: the helper is a short-lived pipe,
+  # and oneshot means "started" implies the handshake actually completed, plus
+  # RemainAfterExit leaves the unit legible as active (exited) afterwards
+  # instead of dead. No-ops harmlessly (exit 0) in the non-uwsm escape-hatch
+  # session, where PAM_KWALLET5_LOGIN is unset.
+  systemd.user.services.plasma-kwallet-pam = {
+    Unit = {
+      Description = "Unlock kwallet from pam credentials";
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.kdePackages.kwallet-pam}/libexec/pam_kwallet_init";
+      Slice = "background.slice";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
 
   xdg.portal = {
     enable = true;
