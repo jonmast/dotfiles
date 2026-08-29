@@ -10,13 +10,6 @@
     # https://github.com/OrcaSlicer/OrcaSlicer/issues/13137
     nixpkgs-orca.url = "github:nixos/nixpkgs/62efab0dada7d38f14f7147bdd6c350780e9af10";
 
-    # Pin a dedicated nixpkgs for magic-context-dashboard. It builds from
-    # source (Rust + Tauri, no binary cache), so every rustc/webkitgtk/gtk
-    # bump in nixos-unstable forces a full local recompile. Isolating it on
-    # its own input means regular `nix flake update` of the main input no
-    # longer invalidates it — only deliberate bumps of this rev do.
-    nixpkgs-magicctx.url = "github:nixos/nixpkgs/e73de5be04e0eff4190a1432b946d469c794e7b4";
-
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -56,11 +49,10 @@
     hermes-agent.url = "github:NousResearch/hermes-agent";
   };
 
-  outputs = { self, nixpkgs, home-manager, handy, nixpkgs-orca, nixpkgs-magicctx, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, handy, nixpkgs-orca, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
-      magicctxPkgs = import nixpkgs-magicctx { inherit system; };
     in
     {
       packages.${system} = {
@@ -68,7 +60,6 @@
         opencode2 = pkgs.callPackage ./nix/packages/opencode2 { };
         omniroute = pkgs.callPackage ./nix/packages/omniroute { };
         lazyskills = pkgs.callPackage ./nix/packages/lazyskills { };
-        magic-context-dashboard = magicctxPkgs.callPackage ./nix/packages/magic-context-dashboard { };
         default = self.packages.${system}.ocmonitor;
       };
 
@@ -104,10 +95,6 @@
                 opencode2 = final.callPackage ./nix/packages/opencode2 { };
                 omniroute = final.callPackage ./nix/packages/omniroute { };
                 lazyskills = final.callPackage ./nix/packages/lazyskills { };
-                magic-context-dashboard =
-                  (import nixpkgs-magicctx {
-                    inherit system;
-                  }).callPackage ./nix/packages/magic-context-dashboard { };
               })
             ];
 

@@ -77,7 +77,6 @@ in
     k9s
     kdePackages.kdeconnect-kde
     lazyskills
-    magic-context-dashboard
     kubeconform
     kubectl
     kubectl-cnpg
