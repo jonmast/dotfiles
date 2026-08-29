@@ -275,10 +275,31 @@
     # `quickshell` input in flake.nix for why the pin exists and what has to
     # be true before it can be dropped.
     package = inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}.default;
-    # The QML tree is deployed as real files under ~/.config/quickshell/shell
-    # (ADR 0001: own minimal shell, HM-deployed, nothing vendored from
-    # omarchy). `activeConfig` makes the unit run `quickshell --config shell`.
-    configs.shell = ./quickshell;
+    # The QML tree is deployed to ~/.config/quickshell/shell (ADR 0001: own
+    # minimal shell, HM-deployed, nothing vendored from omarchy).
+    # `activeConfig` makes the unit run `quickshell --config shell`.
+    #
+    # Deployed as an out-of-store symlink to the working tree, NOT copied into
+    # the store. With a store copy, every QML edit changes the config's store
+    # path, which changes the system derivation, which costs a full ~17s
+    # `nixos-rebuild` — evaluation is 100% of a no-op rebuild here, and the
+    # NixOS/home-manager module system is a fixpoint, so nothing partial can be
+    # cached. Pointing at the working tree makes the store path depend only on
+    # the target path string, so editing QML needs no rebuild at all: just
+    # `systemctl --user restart quickshell`.
+    #
+    # What this trades away, deliberately:
+    #   - The QML is no longer captured in the generation, so a generation
+    #     rollback will NOT roll the shell back. Acceptable here only because
+    #     this tree is in git, which is the real history for these files.
+    #   - The config is no longer reproducible from the flake alone; another
+    #     machine needs this repo cloned to this exact absolute path.
+    #   - The files are writable. Safe for quickshell specifically, which only
+    #     reads and hot-reloads QML. Do NOT extend this to config that its own
+    #     application rewrites — that is the Handy autostart trap documented at
+    #     the top of common.nix, where read-only store deployment is the fix.
+    configs.shell = config.lib.file.mkOutOfStoreSymlink
+      "${config.home.homeDirectory}/.dotfiles/nix/home/quickshell";
     activeConfig = "shell";
     systemd.enable = true;
   };
