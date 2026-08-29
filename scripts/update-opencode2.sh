@@ -2,8 +2,8 @@
 # Bump opencode2 to the newest build without manual hash computation.
 #
 # Usage:
-#   scripts/update-opencode2.sh            # bump to newest "next" build
-#   scripts/update-opencode2.sh beta       # bump to newest "beta" build
+#   scripts/update-opencode2.sh            # bump to newest "beta" build
+#   scripts/update-opencode2.sh next       # bump to newest "next" build
 #   scripts/update-opencode2.sh latest     # bump to newest stable
 #
 # How it works:
@@ -14,7 +14,7 @@ set -e
 cd "$(dirname "$0")/.."
 
 pkg="@opencode-ai/cli-linux-x64"
-tag="${1:-next}"
+tag="${1:-beta}"
 
 ver=$(curl -s "https://registry.npmjs.org/$pkg" | jq -r --arg t "$tag" '."dist-tags".[$t] // empty')
 if [ -z "$ver" ]; then
