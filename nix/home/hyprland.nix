@@ -5,6 +5,7 @@
   # session, so they live here instead of common.nix.
   home.packages = with pkgs; [
     hyprland
+    phinger-cursors
     mako
     hyprlock
     hypridle
@@ -148,6 +149,8 @@
         "MOZ_ENABLE_WAYLAND,1"
         "XDG_CURRENT_DESKTOP,Hyprland"
         "XDG_SESSION_TYPE,wayland"
+        "XCURSOR_THEME,phinger-cursors-dark"
+        "XCURSOR_SIZE,24"
       ];
       # The Shell is started by the HM-managed systemd user service
       # (programs.quickshell.systemd.enable below) — do NOT also exec-once it,
