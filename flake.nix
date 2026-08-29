@@ -22,6 +22,23 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Quickshell — the QtQuick desktop shell toolkit that hosts The Shell
+    # (nix/home/quickshell). Pinned to the upstream v0.3.1 tag rather than
+    # taken from nixpkgs: nixpkgs-unstable still ships 0.3.0, whose `kill`
+    # returns before the instance has actually exited. That race bites every
+    # shell restart (`systemctl --user restart quickshell` can land a new
+    # instance while the old one still holds the layer-shell surfaces).
+    # Upstream fixed it in 0.3.1; nixpkgs PR #554917 is the pending bump.
+    # Drop this input and switch to pkgs.quickshell once nixpkgs is >= 0.3.1.
+    #
+    # `inputs.nixpkgs.follows` is MANDATORY, not hygiene: quickshell links
+    # against private Qt APIs and must be built against the exact same Qt as
+    # the rest of the session, or it crashes at startup on ABI mismatch.
+    quickshell = {
+      url = "git+https://git.outfoxxed.me/outfoxxed/quickshell?ref=refs/tags/v0.3.1";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     handy = {
       url = "github:cjpais/Handy";
       inputs.nixpkgs.follows = "nixpkgs";

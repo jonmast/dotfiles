@@ -63,3 +63,16 @@ a `programs.uwsm.waylandCompositors` entry for Hyprland. See issue 01 for why
    plain `hyprland.desktop` entry as an in-SDDM escape hatch, so there are two.
    `services.displayManager.defaultSession = "hyprland-uwsm"` preselects the right
    one. See ADR 0002's amendment.
+
+## Implementation amendments (2026-08-28, issue 03)
+
+4. **The five services are still five, but one of them changed identity.** waybar
+   is gone; `quickshell` (The Shell) took its slot on `graphical-session.target`
+   with the same `After=`/`PartOf=`/`WantedBy=` triple. home-manager's
+   `programs.quickshell` module generates the unit with `After` and `WantedBy`
+   already pointing at `config.wayland.systemd.target` — which is
+   `graphical-session.target` here, so the module's own values and ours agree and
+   the definitions merge cleanly. What the module does NOT emit is `PartOf=`, so
+   the override in `nix/home/hyprland.nix` supplies it. Without that the unit
+   starts with the session but is never stopped by it: precisely the logout leak
+   this ADR exists to close, reintroduced through a module default.

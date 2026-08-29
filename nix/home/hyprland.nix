@@ -1,11 +1,10 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, inputs, ... }:
 
 {
   # Hyprland ecosystem packages. These are only useful inside a Hyprland
   # session, so they live here instead of common.nix.
   home.packages = with pkgs; [
     hyprland
-    waybar
     mako
     hyprlock
     hypridle
@@ -19,7 +18,7 @@
     playerctl      # media key control
     brightnessctl  # brightness key control
     wireplumber    # provides wpctl for audio key control
-    jq             # JSON parsing for waybar custom scripts
+    jq             # JSON parsing for the $mod T DWT keybind below
     xdg-desktop-portal-hyprland
     xdg-desktop-portal-gtk
     # KDE portal + kwallet so apps that use libsecret (Chrome, mpv scripts,
@@ -43,7 +42,7 @@
   ];
 
   # Leak-prevention (was a v1.1 TODO, fixed structurally by uwsm — ADR 0003):
-  # HM starts hyprland-session.target but never stops it on logout, so waybar
+  # HM starts hyprland-session.target but never stops it on logout, so the bar
   # and friends used to persist into the next login. Under uwsm, uwsm owns
   # graphical-session.target; hyprland-session.target declares
   # `BindsTo=graphical-session.target`, so when uwsm stops graphical-session on
@@ -53,7 +52,7 @@
   # Issue 02 collapsed the target indirection. During the dual-session window
   # the five services had to stay on hyprland-session.target, because Plasma
   # also activates graphical-session.target and a literal rebind would have
-  # started waybar/mako/hypridle under Plasma (hypridle crash-loops with no
+  # started the bar/mako/hypridle under Plasma (hypridle crash-loops with no
   # Hyprland IPC). Plasma is gone, so they now bind directly to
   # graphical-session.target as ADR 0003 originally called for.
   #
@@ -61,14 +60,16 @@
   # declares `Before=graphical-session.target`, so the target is only reached
   # once the compositor has signalled ready via `uwsm finalize` — which is also
   # what exports HYPRLAND_INSTANCE_SIGNATURE into the systemd user environment.
-  # So hypridle/waybar always find a live Hyprland IPC socket.
+  # So hypridle and The Shell always find a live Hyprland IPC socket. This
+  # matters more for The Shell than it did for waybar: the Bar's workspace and
+  # window-title widgets are pure Hyprland IPC consumers.
   #
   # hyprland-session.target still exists (HM defines it) and is still started by
   # the exec-once below, but nothing is bound to it any more. It retains exactly
   # one job: in the NON-uwsm escape-hatch session, nothing else would ever
   # activate graphical-session.target, and `BindsTo=` implies `Requires=`, so
   # starting hyprland-session.target pulls graphical-session.target up and the
-  # five services come with it. Drop that exec-once and the escape-hatch session
+  # services come with it. Drop that exec-once and the escape-hatch session
   # boots to a bare compositor with no bar or notifications.
   wayland.windowManager.hyprland = {
     enable = true;
@@ -93,7 +94,7 @@
     # The `start` MUST stay. BindsTo is directional — it makes
     # hyprland-session.target require graphical-session.target, but starting
     # graphical-session.target does NOT pull hyprland-session.target up. Drop
-    # the start and waybar/mako/hypridle/walker/elephant never launch.
+    # the start and quickshell/mako/hypridle/walker/elephant never launch.
     # Verified both directions with probe units.
     systemd.extraCommands = [ "systemctl --user start hyprland-session.target" ];
     # hyprlang (legacy default) — our config is written in hyprlang syntax.
@@ -119,7 +120,7 @@
         # so the touchpad stays active when typing into Moonlight's
         # streamed window — the kernel's i2c-hid palm-rejection can
         # otherwise leave the pad unresponsive for ~1s after every key.
-        # Toggle with $mainMod+T or the waybar DWT button to enable
+        # Toggle with $mainMod+T or The Shell's DWT bar widget to enable
         # disable_while_typing for apps like Ghostty (phantom clicks).
         touchpad = {
           natural_scroll = true;
@@ -148,9 +149,11 @@
         "XDG_CURRENT_DESKTOP,Hyprland"
         "XDG_SESSION_TYPE,wayland"
       ];
-      # waybar is started by the HM-managed systemd user service
-      # (programs.waybar.systemd.enable below) — do NOT also exec-once it,
-      # or you'll get two instances fighting over the bar slot.
+      # The Shell is started by the HM-managed systemd user service
+      # (programs.quickshell.systemd.enable below) — do NOT also exec-once it,
+      # or you'll get two instances fighting over the layer-shell bar surface.
+      # This is also why the boot check for issue 03 includes a logout/re-login
+      # cycle: a second instance only shows up on the second session.
       exec-once = [ "swaybg -i ~/.config/hypr/wallpaper.jpg -m fill" ];
       # $mod = SUPER (Hyprland's default $mainMod; explicit for clarity)
       "$mainMod" = "SUPER";
@@ -215,177 +218,30 @@
     };
   };
 
-  # programs.waybar.systemd.enable generates the unit; this override retargets
-  # its lifecycle onto graphical-session.target (see the note at the top of this
-  # file — Hyprland is now the only session, so the extra indirection through
-  # hyprland-session.target is gone).
-  systemd.user.services.waybar = {
-    Unit = {
-      After = [ "graphical-session.target" ];
-      PartOf = [ "graphical-session.target" ];
-    };
-    Install.WantedBy = [ "graphical-session.target" ];
-  };
+  # The Shell. `programs.quickshell.systemd.enable` already emits the unit with
+  # `After=` and `WantedBy=` pointing at `config.wayland.systemd.target`, which
+  # is graphical-session.target here — so those are left alone rather than
+  # restated (restating them merges to a literally duplicated line in the unit
+  # file).
+  #
+  # What the module does NOT emit is `PartOf=`, and without it the unit is
+  # started by graphical-session.target but never stopped by it: the logout
+  # leak ADR 0003 exists to close, reintroduced through a module default. Every
+  # other Hyprland-scoped service in this file carries the same triple.
+  systemd.user.services.quickshell.Unit.PartOf = [ "graphical-session.target" ];
 
-  programs.waybar = {
+  programs.quickshell = {
     enable = true;
-    package = pkgs.waybar;
+    # Pinned upstream v0.3.1, not pkgs.quickshell (still 0.3.0). See the
+    # `quickshell` input in flake.nix for why the pin exists and what has to
+    # be true before it can be dropped.
+    package = inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    # The QML tree is deployed as real files under ~/.config/quickshell/shell
+    # (ADR 0001: own minimal shell, HM-deployed, nothing vendored from
+    # omarchy). `activeConfig` makes the unit run `quickshell --config shell`.
+    configs.shell = ./quickshell;
+    activeConfig = "shell";
     systemd.enable = true;
-    settings = [
-      {
-        layer = "top";
-        position = "top";
-        height = 30;
-        margin-top = 5;
-        margin-left = 10;
-        margin-right = 10;
-        modules-left = [ "hyprland/workspaces" "hyprland/window" ];
-        modules-right = [ "custom/dwt" "bluetooth" "pulseaudio" "network" "battery" "clock" "tray" ];
-        clock = {
-          format = "{:%a %b %d  %H:%M}";
-          tooltip-format = "<tt><small>{calendar}</small></tt>";
-        };
-        tray = { spacing = 10; };
-        pulseaudio = {
-          format = "{icon} {volume}%";
-          format-muted = "muted";
-          format-icons = {
-            default = [ "🔊" "🔉" "🔈" ];
-          };
-        };
-        battery = {
-          format = "{icon} {capacity}%";
-          format-icons = [ "🪫" "🔋" "🔋" ];
-          format-charging = "⚡ {capacity}%";
-          states = {
-            warning = 30;
-            critical = 15;
-          };
-        };
-        bluetooth = {
-          format = "BT {device_alias}";
-          format-connected = "BT {device_alias}";
-          format-disconnected = "BT off";
-          tooltip-format = "{device_enumerate}";
-        };
-        "custom/dwt" = {
-          return-type = "json";
-          exec = pkgs.writeShellScript "dwt-status" ''
-            val=$(hyprctl getoption input:touchpad:disable_while_typing -j | jq -r .bool)
-            if [ "$val" = "true" ]; then
-              echo '{"text":"DWT on","class":"dwt-on","tooltip":"Disable-while-typing ON (click to disable)"}'
-            else
-              echo '{"text":"DWT off","class":"dwt-off","tooltip":"Disable-while-typing OFF (click to enable)"}'
-            fi
-          '';
-          interval = 5;
-        };
-      }
-    ];
-    style = ''
-      * {
-        font-family: "Sans", sans-serif;
-        font-size: 13px;
-        min-height: 0;
-      }
-
-      window#waybar {
-        background: transparent;
-        box-shadow: none;
-      }
-
-      tooltip {
-        background: #2e3440;
-        border: 1px solid #4c566a;
-        border-radius: 6px;
-        color: #d8dee9;
-      }
-
-      #workspaces button {
-        padding: 0 10px;
-        color: #4c566a;
-        background: rgba(46, 52, 64, 0.65);
-        border-radius: 6px;
-        margin: 4px 2px;
-        border: none;
-      }
-
-      #workspaces button.active,
-      #workspaces button.focused {
-        color: #2e3440;
-        background: #88c0d0;
-        border-radius: 6px;
-      }
-
-      #workspaces button:hover {
-        background: #434c5e;
-        color: #eceff4;
-      }
-
-      #window {
-        padding: 0 12px;
-        color: #d8dee9;
-        background: rgba(46, 52, 64, 0.65);
-        border-radius: 6px;
-        margin: 4px 2px;
-      }
-
-      #custom-dwt,
-      #bluetooth,
-      #pulseaudio,
-      #network,
-      #battery,
-      #clock,
-      #tray {
-        padding: 0 12px;
-        color: #d8dee9;
-        background: rgba(46, 52, 64, 0.65);
-        border-radius: 6px;
-        margin: 4px 2px;
-      }
-
-      #custom-dwt.dwt-on {
-        color: #a3be8c;
-      }
-
-      #custom-dwt.dwt-off {
-        color: #bf616a;
-      }
-
-      #bluetooth.connected {
-        color: #a3be8c;
-      }
-
-      #bluetooth.off {
-        color: #4c566a;
-      }
-
-      #pulseaudio.muted {
-        color: #bf616a;
-      }
-
-      #network.disconnected {
-        color: #bf616a;
-      }
-
-      #battery.full,
-      #battery.charging {
-        color: #a3be8c;
-      }
-
-      #battery.warning {
-        color: #ebcb8b;
-      }
-
-      #battery.critical {
-        color: #bf616a;
-      }
-
-      #clock {
-        color: #88c0d0;
-        font-weight: bold;
-      }
-    '';
   };
 
   # Needed for kdeconnect (app-org.kde.kdeconnect.daemon@autostart.service) and

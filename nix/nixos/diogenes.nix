@@ -245,6 +245,20 @@
     };
   };
 
+  # UPower — required by The Shell's battery widget (issue 03).
+  #
+  # This is a genuine new dependency, not a tidy-up. waybar's battery module
+  # read /sys/class/power_supply directly, so the bar showed a battery on a
+  # host that has never had UPower installed. Quickshell's battery service is
+  # UPower-only (`Quickshell.Services.UPower`), and with no daemon it fails
+  # quietly:
+  #     Could not launch service org.freedesktop.UPower:
+  #     (ServiceUnknown, The name is not activatable)
+  # leaving `UPower.displayDevice` inert and the widget blank rather than
+  # erroring. Caught by running the shell against the live session before
+  # switching, not by eval — nothing about this is a build-time failure.
+  services.upower.enable = true;
+
   # Podman
   virtualisation.podman = {
     enable = true;
