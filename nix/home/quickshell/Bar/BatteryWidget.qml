@@ -18,7 +18,8 @@ Item {
     id: root
 
     readonly property var device: UPower.displayDevice
-    readonly property int capacity: device ? Math.round(device.percentage) : 0
+    // UPower's percentage is 0.0-1.0, not 0-100.
+    readonly property int capacity: device ? Math.round(device.percentage * 100) : 0
     readonly property bool charging: device ? device.state === UPowerDeviceState.Charging : false
     readonly property bool full: device ? device.state === UPowerDeviceState.FullyCharged : false
 
