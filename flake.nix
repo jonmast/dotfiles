@@ -32,24 +32,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    handy = {
-      url = "github:cjpais/Handy";
-      inputs.nixpkgs.follows = "nixpkgs";
-      # bun2nix (Handy's dependency) runs its flake-parts modules for every
-      # system in github:nix-systems/default, including x86_64-darwin. Those
-      # evaluations hit nixpkgs.legacyPackages.x86_64-darwin, which nixpkgs
-      # 26.11 hard-throws on — and nixpkgs.config can't reach that instance.
-      # Restrict bun2nix to this host's system so they never happen.
-      inputs.bun2nix.inputs.systems.url = "github:nix-systems/x86_64-linux";
-    };
-
     # Hermes Agent (Nous Research). Official flake: provides the `hermes`
     # CLI, the Hermes Desktop Electron app, and a home-manager module
     # (programs.hermes-agent / services.hermes-agent).
     hermes-agent.url = "github:NousResearch/hermes-agent";
   };
 
-  outputs = { self, nixpkgs, home-manager, handy, nixpkgs-orca, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, nixpkgs-orca, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
@@ -58,7 +47,6 @@
       packages.${system} = {
         ocmonitor = pkgs.callPackage ./nix/packages/ocmonitor { };
         opencode2 = pkgs.callPackage ./nix/packages/opencode2 { };
-        omniroute = pkgs.callPackage ./nix/packages/omniroute { };
         lazyskills = pkgs.callPackage ./nix/packages/lazyskills { };
         default = self.packages.${system}.ocmonitor;
       };
@@ -93,7 +81,6 @@
 
                 ocmonitor = final.callPackage ./nix/packages/ocmonitor { };
                 opencode2 = final.callPackage ./nix/packages/opencode2 { };
-                omniroute = final.callPackage ./nix/packages/omniroute { };
                 lazyskills = final.callPackage ./nix/packages/lazyskills { };
               })
             ];
@@ -101,7 +88,7 @@
             home-manager = {
               useGlobalPkgs = true;
               users.jon = { imports = [ ./nix/home/default.nix ]; };
-              extraSpecialArgs = { inherit inputs handy; };
+              extraSpecialArgs = { inherit inputs; };
             };
           }
         ];

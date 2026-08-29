@@ -35,19 +35,4 @@
   systemd.user.services."restic-backups-homebackup".Unit = {
     ConditionACPower = true;
   };
-
-  # OmniRoute AI router server
-  systemd.user.services.omniroute = {
-    Unit = {
-      Description = "OmniRoute AI router server";
-      After = [ "graphical-session.target" ];
-      PartOf = [ "graphical-session.target" ];
-    };
-    Service = {
-      ExecStart = "${config.home.homeDirectory}/.nix-profile/bin/omniroute serve --no-open --no-tray";
-      Restart = "on-failure";
-      RestartSec = 5;
-    };
-    Install.WantedBy = [ "graphical-session.target" ];
-  };
 }
