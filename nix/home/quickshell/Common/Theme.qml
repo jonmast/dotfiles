@@ -65,4 +65,38 @@ Singleton {
     readonly property color tooltipBorder: nord3
     readonly property int tooltipRadius: 6
     readonly property int tooltipPadding: 8
+
+    // ---- Launcher menu (issue 04) --------------------------------------
+    // These are NOT parity values: waybar had no launcher, and walker's look
+    // is not something we are reproducing. They are derived from what is
+    // already here — the tooltip's card treatment (nord0 on a nord3 hairline)
+    // and the workspace button's active state (nord8 slab, nord0 text) — so
+    // the menu reads as part of the same shell rather than a second theme.
+    // The one borrowed-from-elsewhere number is the radius: Hyprland's
+    // `decoration.rounding` is 8, and the menu is window-sized, not pill-sized.
+    readonly property int menuWidth: 520
+    readonly property int menuRadius: 8
+    readonly property int menuPadding: 12
+    readonly property int menuRowHeight: 36
+    readonly property int menuRowRadius: 6
+    readonly property int menuIconSize: 22
+    // Rows past this scroll. Eight is roughly a third of the 960pt-tall panel
+    // this runs on, which keeps the card a menu rather than a page.
+    readonly property int menuMaxRows: 8
+    // Vertical placement: the card's top edge sits this far down the screen.
+    // Above centre, because the list grows downward and a centred card walks
+    // up the screen as you type.
+    readonly property real menuTopFraction: 0.18
+
+    readonly property int menuQueryFontSize: 16
+    readonly property int menuDetailFontSize: 11
+
+    readonly property color menuBackground: nord0
+    readonly property color menuBorder: nord3
+    readonly property color menuSelectedBackground: nord8
+    readonly property color menuSelectedForeground: nord0
+    readonly property color menuDetailForeground: nord3
+    // A scrim dark enough to say "this is modal", light enough to keep the
+    // desktop legible behind it. nord0 at 45%.
+    readonly property color menuScrim: Qt.rgba(46 / 255, 52 / 255, 64 / 255, 0.45)
 }

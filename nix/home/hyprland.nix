@@ -9,7 +9,10 @@
     mako
     hyprlock
     hypridle
-    walker         # app launcher + clipboard history
+    # Clipboard history only, since issue 04 — The Shell's menu is the app
+    # launcher (CONTEXT.md, "Walker stack"). Kept because Quickshell 0.3.1 has
+    # no clipboard-history primitive and elephant's is already proven here.
+    walker         # clipboard history frontend ($mod SHIFT V)
     elephant       # walker backend data service
     swaybg
     grim
@@ -162,10 +165,19 @@
       "$mainMod" = "SUPER";
       bind = [
         "$mainMod, RETURN, exec, ghostty"
-        "$mainMod, D, exec, walker"
+        # The Shell's launcher menu (issue 04). `qs ipc call` reaches the
+        # already-running shell over its IPC socket; `-c shell` names the
+        # config, matching `activeConfig` below. Measured at ~35ms round trip.
+        #
+        # If the shell is not running this prints an error and does nothing —
+        # which is the honest failure mode, since without the shell there is no
+        # launcher to open. `walker` is deliberately NOT a fallback here: two
+        # launchers on one bind is how the demotion would quietly undo itself.
+        "$mainMod, D, exec, ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call menu toggle"
         "$mainMod, Q, killactive"
         "$mainMod, E, exec, dolphin"
         "$mainMod, V, togglefloating"
+        # Unchanged by issue 04: clipboard history is the one job walker keeps.
         "$mainMod SHIFT, V, exec, walker -m clipboard"
         "$mainMod, F, fullscreen"
         "$mainMod, P, pseudo"
@@ -519,13 +531,23 @@
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  # Walker + Elephant. Elephant is the backend data service; Walker is the
-  # frontend launcher. Walker must run as a service for clipboard history.
+  # Walker + Elephant, demoted to clipboard history by issue 04. Elephant is
+  # the backend data service; walker is the frontend. Walker must run as a
+  # service for clipboard history — the history lives in the running process,
+  # so a one-shot invocation would show an empty list.
+  #
+  # The provider set is clipboard-only now. `desktopapplications` and `runner`
+  # were what made a bare `walker` an app launcher and a command runner; that
+  # role belongs to The Shell's menu (CONTEXT.md, "Walker stack"), and leaving
+  # the providers configured would leave a second, divergent launcher one
+  # keystroke away. `$mod SHIFT V` passes `-m clipboard` explicitly, so it does
+  # not depend on this set — but a bare `walker` typed at a prompt now opens
+  # the clipboard rather than a launcher, which is the point.
   xdg.configFile."walker/config.toml".text = ''
     [providers]
       [providers.sets.default]
-      default = ["desktopapplications", "runner", "clipboard"]
-      empty = ["desktopapplications"]
+      default = ["clipboard"]
+      empty = ["clipboard"]
   '';
 
   systemd.user.services.elephant = {
@@ -543,7 +565,7 @@
 
   systemd.user.services.walker = {
     Unit = {
-      Description = "Walker application launcher";
+      Description = "Walker clipboard history";
       After = [ "graphical-session.target" "elephant.service" ];
       PartOf = [ "graphical-session.target" ];
       Requires = [ "elephant.service" ];
