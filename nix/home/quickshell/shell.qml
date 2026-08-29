@@ -18,10 +18,8 @@ import qs.Polkit
 // outside the shell on hyprlock/hypridle (ADR 0004) — the fingerprint unlock
 // path is proven and the shell-lock PAM path is unverified on NixOS.
 //
-// The Bar (issue 03), Menu (issue 04) and Notifications + Osd (issue 05) have
-// bodies. PolkitAgent is still an instantiated stub, so that issue 06 adds a
-// body to a slot that already exists rather than re-litigating the layout.
-// The stub's own file says which issue owns it.
+// All five have bodies: Bar (issue 03), Menu (issue 04), Notifications + Osd
+// (issue 05), PolkitAgent (issue 06). Nothing here is a stub any more.
 //
 // `//@ pragma UseQApplication` above is required for platform menus, which the
 // system tray's right-click DBus menus are.

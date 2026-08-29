@@ -181,6 +181,34 @@ Singleton {
     readonly property int notifHistoryWidth: 460
     readonly property real notifHistoryTopFraction: menuTopFraction
 
+    // ---- Polkit dialog (issue 06) --------------------------------------
+    // Same card idiom again — nord0 slab, nord3 hairline, menu radius — so an
+    // auth prompt reads as part of this shell and not as a stray GTK dialog.
+    // Narrower than the launcher: it holds one sentence and one field.
+    readonly property int polkitWidth: 420
+    readonly property int polkitRadius: menuRadius
+    readonly property int polkitPadding: menuPadding
+    readonly property int polkitIconSize: 32
+    // Above centre for the same reason the launcher is: it appears while you
+    // are looking at whatever asked for it, not at the middle of the screen.
+    readonly property real polkitTopFraction: 0.28
+    readonly property int polkitFieldHeight: 32
+    readonly property int polkitButtonHeight: 30
+
+    readonly property color polkitBackground: menuBackground
+    readonly property color polkitBorder: menuBorder
+    readonly property color polkitScrim: menuScrim
+    // Text tokens follow the notification rules, not the menu's: this is prose
+    // you have to read under mild pressure, so secondary text is dimmed nord4
+    // rather than nord3-on-nord0 (see the notification note above).
+    readonly property color polkitForeground: nord4
+    readonly property real polkitMetaOpacity: notifMetaOpacity
+    readonly property color polkitError: nord11
+    readonly property color polkitFieldBackground: nord2
+    readonly property color polkitAccent: nord8
+    readonly property int polkitTitleFontSize: notifSummaryFontSize
+    readonly property int polkitBodyFontSize: notifBodyFontSize
+
     // ---- OSD (issue 05) ------------------------------------------------
     readonly property int osdWidth: 260
     readonly property int osdRadius: menuRadius
