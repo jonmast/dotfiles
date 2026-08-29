@@ -15,7 +15,9 @@ Rectangle {
     // The affirmative action, drawn as a filled accent slab; everything else
     // is an outline.
     property bool primary: false
-    property bool enabled: true
+    // NOT called `enabled`: Item already has one, and a second meaning for the
+    // same word in the same file is a trap for whoever reads it next.
+    property bool interactive: true
 
     signal activated
 
@@ -23,11 +25,11 @@ Rectangle {
     implicitHeight: Theme.polkitButtonHeight
 
     radius: Theme.menuRowRadius
-    opacity: root.enabled ? 1 : 0.5
+    opacity: root.interactive ? 1 : 0.5
     color: {
         if (!root.primary)
-            return pointer.containsMouse && root.enabled ? Theme.polkitFieldBackground : "transparent";
-        return pointer.containsMouse && root.enabled ? Qt.lighter(Theme.polkitAccent, 1.1) : Theme.polkitAccent;
+            return pointer.containsMouse && root.interactive ? Theme.polkitFieldBackground : "transparent";
+        return pointer.containsMouse && root.interactive ? Qt.lighter(Theme.polkitAccent, 1.1) : Theme.polkitAccent;
     }
     border.width: root.primary ? 0 : 1
     border.color: Theme.polkitBorder
@@ -46,7 +48,7 @@ Rectangle {
 
         anchors.fill: parent
         hoverEnabled: true
-        enabled: root.enabled
+        enabled: root.interactive
         cursorShape: Qt.PointingHandCursor
         onClicked: root.activated()
     }
