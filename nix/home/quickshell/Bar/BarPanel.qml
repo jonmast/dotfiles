@@ -13,6 +13,10 @@ import qs.Common
 //   modules-left   hyprland/workspaces, hyprland/window
 //   modules-right  custom/dwt, bluetooth, pulseaudio, network, battery,
 //                  clock, tray
+//
+// Issue 05 added one module waybar never had, DndWidget, ahead of the right
+// group. It is invisible whenever DND is off, which is the resting state, so
+// the parity contract still holds for the bar you actually look at.
 PanelWindow {
     id: root
 
@@ -60,6 +64,10 @@ PanelWindow {
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.pillSpacing
+
+        // Not a waybar module. Invisible unless DND is on, so the resting bar
+        // is still parity — see DndWidget.
+        DndWidget {}
 
         DwtWidget {}
 

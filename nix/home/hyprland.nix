@@ -6,7 +6,10 @@
   home.packages = with pkgs; [
     hyprland
     phinger-cursors
-    mako
+    # mako removed by issue 05 — The Shell is the notification daemon now
+    # (nix/home/quickshell/Notifications/NotificationService.qml). Only one
+    # process may own org.freedesktop.Notifications, so the removal and the
+    # NotificationServer have to land together.
     hyprlock
     hypridle
     # Clipboard history only, since issue 04 — The Shell's menu is the app
@@ -174,6 +177,16 @@
         # launcher to open. `walker` is deliberately NOT a fallback here: two
         # launchers on one bind is how the demotion would quietly undo itself.
         "$mainMod, D, exec, ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call menu toggle"
+        # The Shell's notification history and do-not-disturb (issue 05). Same
+        # IPC path as the menu above, and the same honest failure mode: with
+        # no shell running there is nothing to show and nothing to silence.
+        #
+        # DND on its own keybind rather than sharing one with the history
+        # panel, because the two get used at completely different moments —
+        # and because an accidental DND is exactly the state that is hard to
+        # notice. The bar grows a DND indicator while it is on.
+        "$mainMod, N, exec, ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call notifications toggleHistory"
+        "$mainMod SHIFT, N, exec, ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call notifications toggleDnd"
         "$mainMod, Q, killactive"
         "$mainMod, E, exec, dolphin"
         "$mainMod, V, togglefloating"
@@ -220,8 +233,18 @@
         ", XF86AudioPlay, exec, playerctl play-pause"
         ", XF86AudioNext, exec, playerctl next"
         ", XF86AudioPrev, exec, playerctl previous"
-        ", XF86MonBrightnessUp, exec, brightnessctl set 5%+"
-        ", XF86MonBrightnessDown, exec, brightnessctl set 5%-"
+        # Brightness pushes its OSD over IPC (issue 05). Volume does not need
+        # to: Pipewire publishes volume and mute as properties, so The Shell
+        # watches them and the three audio binds above are untouched. A
+        # backlight has no equivalent change event worth having, so the bind
+        # tells the shell to look.
+        #
+        # `&&`, so a failed `brightnessctl` does not raise an OSD claiming a
+        # brightness that was never set. The `qs` call is last and its own
+        # failure costs only the OSD — which is the ordering the plan asked
+        # for: an unfinished OSD must never cost working hardware keys.
+        ", XF86MonBrightnessUp, exec, brightnessctl set 5%+ && ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call osd brightness"
+        ", XF86MonBrightnessDown, exec, brightnessctl set 5%- && ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call osd brightness"
       ];
       # Touchpad gestures: 3-finger horizontal swipe to change workspace.
       # Hyprland gesture syntax is `fingers, direction, action` (not
@@ -518,18 +541,16 @@
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  systemd.user.services.mako = {
-    Unit = {
-      Description = "Mako notification daemon (Hyprland)";
-      After = [ "graphical-session.target" ];
-      PartOf = [ "graphical-session.target" ];
-    };
-    Service = {
-      ExecStart = "${pkgs.mako}/bin/mako";
-      Restart = "on-failure";
-    };
-    Install.WantedBy = [ "graphical-session.target" ];
-  };
+  # No mako.service here since issue 05. The Shell claims
+  # org.freedesktop.Notifications itself, and two claimants means whichever
+  # loses the race receives nothing — silently, with no error anywhere. If you
+  # are re-adding a notification daemon, delete The Shell's NotificationServer
+  # in the same change.
+  #
+  # Note for a rebuild that lands this: the old mako.service is not stopped by
+  # `switch` (HM removes the unit, systemd keeps the running process), so the
+  # bus name stays held until logout. `systemctl --user stop mako` before
+  # testing, or check after a re-login.
 
   # Walker + Elephant, demoted to clipboard history by issue 04. Elephant is
   # the backend data service; walker is the frontend. Walker must run as a
