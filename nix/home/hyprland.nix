@@ -197,7 +197,8 @@
         "$mainMod SHIFT, 8, movetoworkspace, 8"
         "$mainMod SHIFT, 9, movetoworkspace, 9"
         "$mainMod SHIFT, E, exit"
-        "$mainMod, T, exec, hyprctl keyword input:touchpad:disable_while_typing $(if [ \"$(hyprctl getoption input:touchpad:disable_while_typing -j | jq -r .bool)\" = 'false' ]; then echo true; else echo false; fi)"
+        # hyprctl returns {"int": 0|1} for this option — no `.bool` field.
+        "$mainMod, T, exec, hyprctl keyword input:touchpad:disable_while_typing $(if [ \"$(hyprctl getoption input:touchpad:disable_while_typing -j | jq -r .int)\" = '0' ]; then echo true; else echo false; fi)"
         ", Print, exec, grim -g \"$(slurp)\" - | wl-copy"
       ];
       bindl = [

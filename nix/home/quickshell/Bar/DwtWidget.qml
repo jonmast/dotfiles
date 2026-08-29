@@ -38,7 +38,11 @@ Item {
             if (code !== 0)
                 return;
             try {
-                root.dwtEnabled = JSON.parse(readOut.text).bool === true;
+                // hyprctl returns {"int": 0|1, "set": true} for this option —
+                // there is no `.bool` field. The old waybar script and the
+                // $mod T bind both used `jq -r .bool`, which silently yielded
+                // null/false and never toggled.
+                root.dwtEnabled = JSON.parse(readOut.text).int === 1;
             } catch (e) {
                 // A malformed or empty reply means Hyprland's IPC is not up
                 // yet. Leave the last known value alone; the poll below will
