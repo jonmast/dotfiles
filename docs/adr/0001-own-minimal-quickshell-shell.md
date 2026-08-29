@@ -33,3 +33,13 @@ Two things the ADR did not anticipate, both confirmed while writing it:
 - **Quickshell synthesizes a `qmldir` per directory**, registering the config root as module `qs` and each subdirectory as `qs.<Dir>`, and auto-registers any file with `pragma Singleton`. So the directory layout *is* the module layout; there is no manifest to maintain. This is why plugins can be plain directories rather than omarchy's `manifest.json` scheme.
 
 One deliberate hole: the stubs are instantiated but empty. In particular `Notifications/` must NOT construct a `NotificationServer` until issue 05 retires mako, because two processes claiming `org.freedesktop.Notifications` means one of them silently stops receiving notifications.
+
+## Amendment (2026-08-29, issue 05)
+
+`Notifications/` and `Osd/` have bodies; only `Polkit/` is still a stub. The hole above is closed: mako's package and its systemd unit were deleted in the same commit that added the `NotificationServer`, and `nix/home/hyprland.nix` now carries a comment at the site of the deleted unit saying why nothing may take its place.
+
+Confirmed while writing it, worth keeping:
+
+- **The bus hand-off is live, not boot-scoped.** Quickshell logs `Could not register notification server at org.freedesktop.Notifications, presumably because one is already registered` and then *retries when the holder unregisters*. So `systemctl --user stop mako` hands the name over to a running shell with no restart. That is what makes issue 05 testable against the live session at all — but it is also the trap in the other direction: `nixos-rebuild switch` removes mako's unit without stopping the running process, so the name stays held until logout. Stop mako by hand when landing this.
+- **The reference-only rule held again, and the deviation is deliberate.** Omarchy persists notifications and DND to `~/.local/state/`; The Shell keeps both in memory. Persisted DND is a silent, open-ended failure — DND left on from last week, no banners, and no reason to suspect the shell. Restarting into "notifications work" is the safer default and matches what a stateless mako did.
+- **A singleton is the seam between a service and its surfaces.** `NotificationService.qml` owns the bus name, the tracked set, DND and the history; `Notifications.qml` owns only the surfaces and the IPC handle. The split is forced rather than stylistic: the Bar's DND indicator needs the same state, and per the amendment above, `qs.<Dir>` module registration means a singleton is the only way state crosses a directory boundary.
