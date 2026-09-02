@@ -4,19 +4,19 @@ import qs.Common
 
 // One bar surface, for one monitor.
 //
-// Geometry is waybar's verbatim: `layer: top`, `position: top`, `height: 30`,
-// `margin-top: 5`, `margin-left/right: 10`, with a transparent window so only
-// the module pills are painted (waybar's `window#waybar { background:
-// transparent }`).
+// A top layer-shell strip, 30px tall with a 5px top margin and 10px either
+// side. The window itself is transparent, so only the module pills are painted.
 //
-// Module order is likewise waybar's:
-//   modules-left   hyprland/workspaces, hyprland/window
-//   modules-right  custom/dwt, bluetooth, pulseaudio, network, battery,
-//                  clock, tray
+// Order, left to right:
+//   left    workspaces, window title
+//   right   DWT, AI quota, bluetooth, audio, network, battery, clock, tray
 //
-// Issue 05 added one module waybar never had, DndWidget, ahead of the right
-// group. It is invisible whenever DND is off, which is the resting state, so
-// the parity contract still holds for the bar you actually look at.
+// Two of those postdate the migration:
+//
+//   DndWidget      (issue 05) sits ahead of the right group and is invisible
+//                  whenever DND is off, which is the resting state.
+//   AiQuotaWidget  Claude quota, always visible once its collector returns a
+//                  record.
 PanelWindow {
     id: root
 
@@ -65,11 +65,12 @@ PanelWindow {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.pillSpacing
 
-        // Not a waybar module. Invisible unless DND is on, so the resting bar
-        // is still parity — see DndWidget.
+        // Invisible unless DND is on — see DndWidget.
         DndWidget {}
 
         DwtWidget {}
+
+        AiQuotaWidget {}
 
         BluetoothWidget {}
 
