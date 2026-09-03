@@ -51,6 +51,51 @@ let
   # mismatch impossible by construction.
   osdQml = "${package.src}/quickshell";
 
+  # Prompt-tuning harness for `whisper.initial_prompt` (unset above, and the
+  # point of this is to find out what it should be).
+  #
+  # It drives the same `voxtype` binary this file installs, via
+  # `voxtype --initial-prompt <P> transcribe <clip>` — a global flag, so every
+  # other setting comes from the generated config.toml below. Model, threads
+  # and context_window_optimization are therefore identical to what the daemon
+  # uses, by construction rather than by remembering to keep two files in sync.
+  #
+  # Corpus and results live in ~/.local/share/voxtype-eval, deliberately outside
+  # the repo: recordings of my own voice, plus prompt text I want to edit
+  # without a rebuild between each attempt. Only a *winning* prompt comes back
+  # here, as initial_prompt in the whisper block.
+  voxtype-eval = pkgs.writeShellApplication {
+    name = "voxtype-eval";
+    runtimeInputs = [
+      pkgs.python3
+      package
+      # pw-record, for capturing the corpus at whisper's native 16kHz mono.
+      pkgs.pipewire
+    ];
+    text = ''
+      exec python3 ${./scripts/voxtype-eval.py} "$@"
+    '';
+  };
+
+  # Corpus builder, kept separate from the harness above: different job
+  # (sourcing text vs measuring transcription) and a different dependency.
+  #
+  # `opencode2` is deliberately NOT in runtimeInputs — it is installed outside
+  # nix by scripts/update-opencode2.sh, so it has to come from the caller's
+  # PATH, which writeShellApplication leaves intact.
+  #
+  # Writes a REVIEW file to stdout, never straight into the corpus: the prompts
+  # it reads were typed, and some were themselves dictated and carry Voxtype's
+  # own mistranscriptions. Both have to be corrected by hand before they can
+  # serve as ground truth.
+  voxtype-eval-corpus = pkgs.writeShellApplication {
+    name = "voxtype-eval-corpus";
+    runtimeInputs = [ pkgs.python3 ];
+    text = ''
+      exec python3 ${./scripts/voxtype_corpus.py} "$@"
+    '';
+  };
+
 
   # Hyprland tracks *physical* key state, so text typed by voxtype while CTRL
   # is still held would be read as CTRL+<letter> and fire compositor binds
@@ -75,7 +120,10 @@ let
     # transcribes a minute of silence. (It intermittently appeared to work
     # before this line existed: releasing inside the ~20ms before the hook
     # landed still hit the default-keymap bind. A race, not a fix.)
-    bindr = CTRL, SPACE, exec, ${voxtype} record stop
+    #
+    # One line suffices now that the trigger is a lone key: there is no
+    # modmask to mismatch, so no second release-order variant is needed.
+    bindr = , XF86AudioMedia, exec, ${voxtype} record stop
     submap = reset
 
     # Active during text output; swallows modifiers so transcribed text cannot
@@ -94,7 +142,24 @@ let
   '';
 in
 {
-  home.packages = [ package ];
+  # The Nerd Font is here rather than in common.nix because the OSD is its
+  # only consumer: upstream's OsdSurface.qml hardcodes
+  # `font.family: "JetBrainsMono Nerd Font"` for the state glyphs, and nothing
+  # else in this configuration uses icon glyphs at all — the quickshell bar
+  # deliberately asks for plain "monospace". Without it fontconfig fell back to
+  # DejaVu Sans Mono, which has no coverage for U+F036C/U+F051F, so the OSD
+  # rendered a tofu box where the mic and hourglass should be.
+  home.packages = [
+    package
+    pkgs.nerd-fonts.jetbrains-mono
+    voxtype-eval
+    voxtype-eval-corpus
+  ];
+
+  # Required for the above to be visible to fontconfig: home-manager only
+  # builds the font cache from home.packages when this is on, and it defaults
+  # off. Installing the font without it leaves the tofu box exactly as it was.
+  fonts.fontconfig.enable = true;
 
   # Search path #3 for the launcher ($XDG_DATA_HOME/voxtype/quickshell).
   xdg.dataFile."voxtype/quickshell".source = osdQml;
@@ -127,6 +192,26 @@ in
         # paying the load on every single dictation, which is the whole
         # latency budget for a short clip.
         on_demand_loading = false;
+
+        # Upstream defaults to `num_cpus::get().min(4)` (transcribe/whisper.rs)
+        # — 4 of this machine's 16 cores, which is what the 391% CPU during
+        # transcription was. Not 16: whisper.cpp's encoder scales poorly past
+        # ~8 threads on a memory-bandwidth-bound iGPU-sharing part, and
+        # leaving headroom keeps the desktop responsive mid-dictation.
+        threads = 8;
+
+        # Whisper pads every clip to a full 30s mel window, so a 2s dictation
+        # cost the same ~8s encoder pass as a 30s one — a fixed floor that
+        # dominated short clips (measured: 1.8s audio -> 8.57s, 36s -> 17.3s;
+        # extrapolating to zero-length audio still cost ~8s). This caps
+        # audio_ctx to fit the actual clip (384 for anything under 5s).
+        #
+        # Upstream ships it off because large-v3/turbo can fall into
+        # repetition loops with a truncated context. That risk is model
+        # specific and does not apply to base.en above — but it is the first
+        # thing to suspect if transcripts ever start stuttering, and the
+        # reason this must be revisited when changing `model`.
+        context_window_optimization = true;
       };
 
       output = {
@@ -137,14 +222,13 @@ in
         pre_output_command = "hyprctl dispatch submap voxtype_suppress";
         post_output_command = "hyprctl dispatch submap reset";
         notification = {
-          # Belt and braces alongside the OSD: if the OSD ever fails to come
-          # up again, silent notifications would leave no indication that the
-          # mic is live — which is how a stuck recording runs to the 60s cap
-          # unnoticed. Start/stop stay off (too chatty for every dictation);
-          # the completion notice is upstream's own default.
+          # All off. The completion notice (upstream's default) was kept as
+          # belt-and-braces while the OSD was unreliable — the OSD is the
+          # better signal now that it works, and a toast on every dictation
+          # is pure noise once transcription lands in ~1s.
           on_recording_start = false;
           on_recording_stop = false;
-          on_transcription = true;
+          on_transcription = false;
         };
       };
 
@@ -166,6 +250,23 @@ in
       Documentation = "https://voxtype.io";
       PartOf = [ "graphical-session.target" ];
       After = [ "graphical-session.target" "pipewire.service" "pipewire-pulse.service" ];
+      # The daemon reads config.toml once at startup and never re-reads it, so
+      # without this a config-only change lands on disk and has no effect until
+      # something else happens to restart the unit. That is not hypothetical:
+      # `threads` and `context_window_optimization` were written correctly by a
+      # switch and then appeared to do nothing, because the daemon was still
+      # the process started before them. Naming the store path here makes
+      # home-manager restart the unit whenever the generated file changes.
+      #
+      # The OSD tree is listed for the same reason: the daemon spawns
+      # quickshell as a child, so patched QML (and any font it resolves at
+      # startup) only takes effect on a daemon restart. Listing only the
+      # config file meant a switch that changed just the QML left the old
+      # Qt process running and the change invisible.
+      X-Restart-Triggers = [
+        "${config.xdg.configFile."voxtype/config.toml".source}"
+        "${osdQml}"
+      ];
     };
     Service = {
       Type = "simple";
@@ -178,8 +279,19 @@ in
       # `voxtype-audio-bridge` (its bridgeBinary property is the bare name).
       # quickshell comes from the same pinned package the session runs, so
       # the OSD cannot end up on a different Qt build than the bar.
+      #
+      # hyprland is here for `hyprctl` and bash for `sh`: run_hook (upstream
+      # src/output/mod.rs) execs `sh -c "<command>"`, resolving BOTH names off
+      # this PATH. With either missing every hook fails with a bare ENOENT
+      # that names neither binary, and the submaps declared in this file are
+      # silently dead code.
       Environment = [
-        "PATH=${lib.makeBinPath [ package config.programs.quickshell.package ]}"
+        "PATH=${lib.makeBinPath [
+          package
+          config.programs.quickshell.package
+          config.wayland.windowManager.hyprland.package
+          pkgs.bash
+        ]}"
       ];
     };
     Install.WantedBy = [ "graphical-session.target" ];
@@ -187,11 +299,23 @@ in
 
   wayland.windowManager.hyprland = {
     settings = {
-      # Push-to-talk: hold CTRL+SPACE, speak, release. `bind` fires on press,
-      # `bindr` on release — the pairing is what makes hold-to-talk possible
-      # without voxtype grabbing the keyboard itself.
-      bind = [ "CTRL, SPACE, exec, ${voxtype} record start" ];
-      bindr = [ "CTRL, SPACE, exec, ${voxtype} record stop" ];
+      # Push-to-talk: hold the Framework media key, speak, release. `bind`
+      # fires on press, `bindr` on release — the pairing is what makes
+      # hold-to-talk possible without voxtype grabbing the keyboard itself.
+      #
+      # XF86AudioMedia, not the obvious CTRL+SPACE, because a lone key has no
+      # modmask. Hyprland matches modmask exactly on release, so every chord
+      # has a release-order trap: with CTRL+SPACE, lifting CTRL before SPACE
+      # matched no bind, the stop was never sent, and recording ran to the 60s
+      # cap. A single key cannot express that bug. It also stops voxtype
+      # eating the spacebar mid-recording, and frees CTRL+SPACE for Emacs
+      # set-mark and IME switching.
+      #
+      # This is the Framework's dedicated media key (confirmed via wev; the
+      # only other free lone key was XF86RFKill, which is wired to the
+      # hardware radio kill and would be a hostile thing to repurpose).
+      bind = [ ", XF86AudioMedia, exec, ${voxtype} record start" ];
+      bindr = [ ", XF86AudioMedia, exec, ${voxtype} record stop" ];
     };
     # Submaps must come after the main keybind block: everything following a
     # `submap = <name>` line belongs to that submap until the next

@@ -8,3 +8,7 @@ result-*
 # Stashed diffs from in-flight migrations (see .stashes/).
 # Currently holds home-manager-WIP.patch from the nix migration.
 .stashes/
+
+# Python bytecode caches, produced whenever a script under nix/home/scripts
+# imports a sibling module (voxtype-eval.py imports voxtype_corpus).
+__pycache__/
