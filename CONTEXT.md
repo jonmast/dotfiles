@@ -29,8 +29,8 @@ Reference implementation only. Its quattro-shell QML is read for how to build Sh
 _Avoid_: depending on omarchy binaries or paths
 
 **Bar parity**:
-The constraint that The Shell's first release reproduces the previous waybar layout, modules, keybinds, and Nord palette exactly. Redesign comes later.
-_Avoid_: redesigning UI during migration
+DISCHARGED. Was the constraint that The Shell's first release reproduce the previous waybar layout, modules, keybinds, and Nord palette exactly. That release shipped and waybar is gone, so the term is history, not a live rule — it survives here only to explain why early bar values look arbitrary.
+_Avoid_: citing it to block a change; there is no waybar left to be at parity with
 
 ### Retained daemons
 
