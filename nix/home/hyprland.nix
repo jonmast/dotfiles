@@ -168,6 +168,9 @@
       "$mainMod" = "SUPER";
       bind = [
         "$mainMod, RETURN, exec, ghostty"
+        # Unified nixpkgs/NixOS options search (nix/packages/nix-search).
+        # Opens nix-search in ghostty; Enter copies the name to clipboard.
+        "$mainMod, slash, exec, ghostty -e nix-search"
         # The Shell's launcher menu (issue 04). `qs ipc call` reaches the
         # already-running shell over its IPC socket; `-c shell` names the
         # config, matching `activeConfig` below. Measured at ~35ms round trip.
@@ -296,8 +299,9 @@
     #     machine needs this repo cloned to this exact absolute path.
     #   - The files are writable. Safe for quickshell specifically, which only
     #     reads and hot-reloads QML. Do NOT extend this to config that its own
-    #     application rewrites — that is the Handy autostart trap documented at
-    #     the top of common.nix, where read-only store deployment is the fix.
+    #     application rewrites. An app that persists its own settings will
+    #     happily overwrite a writable symlink target, silently undoing the
+    #     declared config; read-only store deployment is the fix for those.
     configs.shell = config.lib.file.mkOutOfStoreSymlink
       "${config.home.homeDirectory}/.dotfiles/nix/home/quickshell";
     activeConfig = "shell";

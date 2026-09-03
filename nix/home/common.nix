@@ -45,6 +45,7 @@ in
     neovim
     nixd
     nix-ld
+    nix-search
     nmap
     nodejs
     ocmonitor

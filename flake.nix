@@ -82,6 +82,7 @@
                 ocmonitor = final.callPackage ./nix/packages/ocmonitor { };
                 opencode2 = final.callPackage ./nix/packages/opencode2 { };
                 lazyskills = final.callPackage ./nix/packages/lazyskills { };
+                nix-search = final.callPackage ./nix/packages/nix-search { };
               })
             ];
 
