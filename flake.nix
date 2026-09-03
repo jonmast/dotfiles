@@ -36,9 +36,16 @@
     # CLI, the Hermes Desktop Electron app, and a home-manager module
     # (programs.hermes-agent / services.hermes-agent).
     hermes-agent.url = "github:NousResearch/hermes-agent";
+
+    # Nub — all-in-one Node.js toolkit (TypeScript runner, pnpm-compatible
+    # package manager, Node version manager). Not yet in nixpkgs (PR #535802).
+    nub = {
+      url = "github:nubjs/nub";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, nixpkgs-orca, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, nixpkgs-orca, nub, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
@@ -83,6 +90,7 @@
                 opencode2 = final.callPackage ./nix/packages/opencode2 { };
                 lazyskills = final.callPackage ./nix/packages/lazyskills { };
                 nix-search = final.callPackage ./nix/packages/nix-search { };
+                nub = nub.packages.${system}.default;
               })
             ];
 
