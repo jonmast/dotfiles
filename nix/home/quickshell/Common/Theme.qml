@@ -66,6 +66,11 @@ Singleton {
     readonly property int tooltipRadius: 6
     readonly property int tooltipPadding: 8
 
+    // Band thickness of the AI-quota ring glyph. Settled by eye against the
+    // real tooltip: thinner and the three marks stop being separable, thicker
+    // and the glyph outweighs the numbers it is annotating.
+    readonly property int quotaRingThickness: 11
+
     // ---- Launcher menu (issue 04) --------------------------------------
     // These are NOT parity values: waybar had no launcher, and walker's look
     // is not something we are reproducing. They are derived from what is

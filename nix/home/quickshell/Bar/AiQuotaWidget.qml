@@ -49,6 +49,24 @@ Item {
         return Math.floor(hours / 24) + "d " + (hours % 24) + "h";
     }
 
+    // Age of a past instant, as against `formatCountdown`'s distance to a future
+    // one. Coarse on purpose: the useful question is "is this reading minutes or
+    // hours old", and a ticking seconds figure would draw the eye to the least
+    // important number on the card.
+    function formatAge(atMs) {
+        if (!atMs)
+            return "";
+        const minutes = Math.floor((root.now - atMs) / 60000);
+        if (minutes < 1)
+            return "just now";
+        if (minutes < 60)
+            return minutes + "m ago";
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24)
+            return hours + "h ago";
+        return Math.floor(hours / 24) + "d ago";
+    }
+
     function formatTokens(count) {
         if (count >= 1000000)
             return (count / 1000000).toFixed(1) + "M";
@@ -118,7 +136,10 @@ Item {
 
     Timer {
         interval: 1000
-        running: hover.hovered
+        // Keyed to the tooltip rather than to `hover`, because the tooltip
+        // outlives the pill's hover: once the pointer is inside the popup
+        // clicking a legend row, the countdowns must keep ticking.
+        running: tooltip.visible
         repeat: true
         triggeredOnStart: true
         onTriggered: root.now = Date.now()
@@ -167,180 +188,18 @@ Item {
     }
 
     HoverTooltip {
+        id: tooltip
+
         anchorItem: root
-        visible: hover.hovered
+        // The legend rows inside are clickable, so the popup has to survive the
+        // pointer crossing the gap between the pill and itself.
+        interactive: true
+        requested: hover.hovered
 
-        Column {
-            spacing: Theme.notifLineSpacing
-
-            // One section per provider. The plugin already collapsed each
-            // provider's accounts into a single provider entry carrying its
-            // windows, so the client renders from that shape alone — no
-            // provider-specific parsing here.
-            Repeater {
-                model: root.record && root.record.providers ? root.record.providers : []
-
-                Column {
-                    spacing: Theme.notifLineSpacing
-
-                    Text {
-                        text: modelData.prefix + "  " + modelData.name
-                        color: Theme.foreground
-                        font.pixelSize: Theme.tooltipFontSize
-                        font.bold: true
-                        renderType: Text.NativeRendering
-                    }
-
-                    // A provider that errored is shown as such rather than being
-                    // silently omitted: one broken provider must not blank the
-                    // others.
-                    Text {
-                        visible: !!modelData.error
-                        text: "error: " + (modelData.error ? modelData.error.message : "")
-                        color: Theme.nord13
-                        font.pixelSize: Theme.tooltipFontSize
-                        font.family: Theme.monoFamily
-                        renderType: Text.NativeRendering
-                    }
-
-                    // Every window, not just the one on the pill: the pill
-                    // answers "how close am I?", the tooltip answers "to what?".
-                    Repeater {
-                        model: modelData.windows || []
-
-                        Text {
-                            required property var modelData
-
-                            // The window the provider's own API says binds is
-                            // marked with a bullet. OpenCode Go also carries the
-                            // dollar figures behind its percent, shown in the
-                            // tooltip.
-                            text: {
-                                const pct = (modelData.usedPercent != null) ? modelData.usedPercent : modelData.percent;
-                                const pctStr = (pct != null && !isNaN(pct)) ? Math.round(pct) + "%" : "—";
-                                let line = (modelData.binding ? "• " : "") + modelData.label + "  " + pctStr + "  ·  resets " + root.formatCountdown(modelData.resetAtMs);
-                                if (modelData.usedDollars != null && modelData.limitDollars != null)
-                                    line += "  ($" + modelData.usedDollars.toFixed(2) + " / $" + modelData.limitDollars.toFixed(2) + ")";
-                                return line;
-                            }
-                            color: {
-                                const pct = (modelData.usedPercent != null) ? modelData.usedPercent : modelData.percent;
-                                return (pct != null && !isNaN(pct)) ? root.percentColor(pct) : Theme.foreground;
-                            }
-                            font.pixelSize: Theme.tooltipFontSize
-                            font.family: Theme.monoFamily
-                            renderType: Text.NativeRendering
-                        }
-                    }
-                }
-            }
-
-            Text {
-                visible: root.record && root.record.today && root.record.today.calls !== undefined
-                text: {
-                    if (!root.record || !root.record.today)
-                        return "";
-                    const today = root.record.today;
-                    let line = "Today  " + today.calls + " calls  ·  " + root.formatTokens(today.tokens) + " tokens";
-                    if (today.failures > 0)
-                        line += "  ·  " + today.failures + " failed";
-                    return line;
-                }
-                color: Theme.notifForeground
-                opacity: Theme.notifMetaOpacity
-                font.pixelSize: Theme.tooltipFontSize
-                font.family: Theme.monoFamily
-                renderType: Text.NativeRendering
-            }
-
-            // Cache hit rate is a prompt-side efficiency number, so it sits with
-            // today's token line rather than with the quota windows above — it
-            // explains the token count, it is not another limit.
-            Text {
-                visible: root.record && root.record.today && root.record.today.cacheHitRate >= 0
-                text: {
-                    if (!root.record || !root.record.today)
-                        return "";
-                    const today = root.record.today;
-                    return "Cache   " + today.cacheHitRate.toFixed(1) + "% hit  ·  " + root.formatTokens(today.cacheReadTokens) + " read  ·  " + root.formatTokens(today.cacheCreationTokens) + " written";
-                }
-                // Coloured, unlike the other activity lines: this one is
-                // actionable. Anything under half means prompts are churning
-                // and the cache is not paying for itself.
-                color: {
-                    if (!root.record || !root.record.today)
-                        return Theme.notifForeground;
-                    const rate = root.record.today.cacheHitRate;
-                    if (rate >= 80)
-                        return Theme.nord14;
-                    if (rate >= 50)
-                        return Theme.nord13;
-                    return Theme.nord11;
-                }
-                font.pixelSize: Theme.tooltipFontSize
-                font.family: Theme.monoFamily
-                renderType: Text.NativeRendering
-            }
-
-            Text {
-                visible: root.record && root.record.rolling30m && root.record.rolling30m.rpm > 0
-                text: {
-                    if (!root.record || !root.record.rolling30m)
-                        return "";
-                    return "30m     " + root.record.rolling30m.rpm + " rpm  ·  " + root.formatTokens(root.record.rolling30m.tpm) + " tpm";
-                }
-                color: Theme.notifForeground
-                opacity: Theme.notifMetaOpacity
-                font.pixelSize: Theme.tooltipFontSize
-                font.family: Theme.monoFamily
-                renderType: Text.NativeRendering
-            }
-
-            Repeater {
-                model: root.record && root.record.topModels ? root.record.topModels : []
-
-                Text {
-                    required property var modelData
-
-                    text: "  " + modelData.model + "  " + modelData.calls + " calls  ·  " + root.formatTokens(modelData.tokens)
-                    color: Theme.notifForeground
-                    opacity: Theme.notifMetaOpacity
-                    font.pixelSize: Theme.tooltipFontSize
-                    font.family: Theme.monoFamily
-                    renderType: Text.NativeRendering
-                }
-            }
-
-            // Only ever shown when there is something to say. An always-present
-            // status line trains you to ignore it.
-            Text {
-                visible: root.record && root.record.error
-                text: root.record ? root.record.error : ""
-                color: Theme.nord13
-                font.pixelSize: Theme.tooltipFontSize
-                renderType: Text.NativeRendering
-            }
-
-            Text {
-                visible: root.stale
-                text: {
-                    if (!root.record || !root.record.fetchedAtMs)
-                        return "";
-                    const minutes = Math.floor((root.now - root.record.fetchedAtMs) / 60000);
-                    return "Last reading " + (minutes < 1 ? "just now" : minutes + "m ago");
-                }
-                color: Theme.notifForeground
-                opacity: Theme.notifMetaOpacity
-                font.pixelSize: Theme.tooltipFontSize
-                renderType: Text.NativeRendering
-            }
-
-            Text {
-                text: "Click to refresh"
-                color: Theme.menuDetailForeground
-                font.pixelSize: Theme.tooltipFontSize
-                renderType: Text.NativeRendering
-            }
+        QuotaTooltip {
+            host: root
+            record: root.record
+            now: root.now
         }
     }
 }

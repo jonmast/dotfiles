@@ -79,7 +79,13 @@ WINDOW_LABELS = {
     "monthly": "Monthly",
 }
 
-QUOTA_TTL_SECONDS = int(os.environ.get("AI_QUOTA_TTL", "1800"))
+# Deliberately short, because this TTL does NOT govern upstream request rate —
+# the plugin owns its own cache and only calls providers on a miss, so a client
+# fetch inside the plugin's TTL is a clone of an in-memory snapshot. Holding a
+# reading here for longer than the plugin holds its own only adds latency
+# between the plugin refreshing and the bar showing it. Set this at or below the
+# plugin's `cache-ttl` and let the plugin decide what upstream costs.
+QUOTA_TTL_SECONDS = int(os.environ.get("AI_QUOTA_TTL", "60"))
 USAGE_TTL_SECONDS = int(os.environ.get("AI_QUOTA_USAGE_TTL", "300"))
 HTTP_TIMEOUT = 20
 
@@ -216,7 +222,42 @@ def window_label(window_id):
     return window_id.replace("_", " ").title()
 
 
-def build_window(window_id, label, used, remaining, reset_at, used_dollars, limit_dollars, binding, model=False):
+def build_projection(projection):
+    """Normalize the plugin's forecast block, or None when it did not send one.
+
+    The plugin declines to forecast a window it cannot honestly forecast — one
+    with no duration, or one too early in its span to extrapolate from. That is
+    a real answer, so an absent block is passed through as None rather than
+    being filled in here: the client already has a clock-only fallback, and it
+    needs to know which of the two readings it is showing.
+    """
+    if not isinstance(projection, dict):
+        return None
+
+    expected = projection.get("expected_fraction")
+    if expected is None:
+        return None
+
+    return {
+        # Profile-weighted progress through the window. The figure the client
+        # cannot compute for itself, and the reason this block is plumbed
+        # through at all rather than derived locally from the reset time.
+        "expectedFraction": expected,
+        # Raw wall-clock progress. Equal to the above when `basis` is
+        # "uniform", i.e. the profile had no history to go on.
+        "elapsedFraction": projection.get("elapsed_fraction"),
+        "projectedUsedPercent": projection.get("projected_used_percent"),
+        "naiveProjectedPercent": projection.get("naive_projected_percent"),
+        # None rather than 0 when the forecast never crosses the limit — the
+        # client distinguishes "no exhaustion predicted" from a timestamp.
+        "projectedExhaustionAtMs": iso_to_ms(projection.get("projected_exhaustion_at")) or None,
+        "verdict": projection.get("verdict", ""),
+        "confidence": projection.get("confidence", ""),
+        "basis": projection.get("basis", ""),
+    }
+
+
+def build_window(window_id, label, used, remaining, reset_at, used_dollars, limit_dollars, binding, model=False, window_seconds=None, projection=None):
     return {
         "id": window_id,
         "label": label,
@@ -227,6 +268,12 @@ def build_window(window_id, label, used, remaining, reset_at, used_dollars, limi
         "limitDollars": limit_dollars,
         "binding": binding,
         "model": model,
+        # How long the window spans. With the reset time this recovers the
+        # window's START, which is what any pace reading needs. Absent for
+        # windows the plugin has no span for (Claude's `extra`, OpenCode Go's
+        # `monthly`), so the client must treat it as optional.
+        "windowSeconds": window_seconds,
+        "projection": projection,
     }
 
 
@@ -261,9 +308,16 @@ def parse_provider(key, provider):
                 window.get("limit_dollars"),
                 window_id == binding_id,
                 model=False,
+                window_seconds=window.get("window_seconds"),
+                projection=build_projection(window.get("projection")),
             )
         )
 
+    # Claude's model-scoped weeklies arrive with neither a span nor a
+    # projection, so they get neither here. Inferring "these ride the weekly
+    # window" is deliberately left to the client, which marks a reading derived
+    # that way as inferred; doing it here would launder a guess into a field
+    # that otherwise only ever carries what the provider stated.
     for model in provider.get("models") or []:
         if not isinstance(model, dict):
             continue
@@ -350,10 +404,11 @@ def fetch_quota(key):
                 "stale": True,
                 "error": error,
                 "fetchedAtMs": cached.get("fetchedAtMs", 0),
+                "generatedAtMs": cached.get("generatedAtMs", 0),
                 "providers": cached.get("providers", []),
                 "tightest": cached.get("tightest"),
             }
-        return {"ok": False, "stale": False, "error": error, "fetchedAtMs": 0, "providers": [], "tightest": None}
+        return {"ok": False, "stale": False, "error": error, "fetchedAtMs": 0, "generatedAtMs": 0, "providers": [], "tightest": None}
 
     if not key:
         return stale_result("No CPAMP admin key in kwallet (%s/%s)" % (WALLET_FOLDER, WALLET_ENTRY))
@@ -373,6 +428,7 @@ def fetch_quota(key):
             "stale": False,
             "error": "",
             "fetchedAtMs": cached.get("fetchedAtMs", 0),
+            "generatedAtMs": cached.get("generatedAtMs", 0),
             "providers": cached.get("providers", []),
             "tightest": cached.get("tightest"),
         }
@@ -392,11 +448,17 @@ def fetch_quota(key):
     except Exception as exc:
         return stale_result("Couldn't parse quota response: %s" % exc)
 
+    # Two different clocks, and the difference is the point. `fetchedAtMs` is
+    # when THIS client last spoke to CPAMP; `generatedAtMs` is when the plugin
+    # last spoke to the providers. They diverge by up to the plugin's own
+    # cache-ttl, so reporting only the first would call a half-hour-old reading
+    # fresh just because the local fetch was recent.
     record = {
         "ok": True,
         "stale": False,
         "error": "",
         "fetchedAtMs": now_ms(),
+        "generatedAtMs": iso_to_ms(payload.get("generated_at")),
         "providers": providers_list,
         "tightest": tightest,
         "backoffUntilMs": 0,
@@ -504,6 +566,7 @@ def main():
         "stale": quota.get("stale", False),
         "error": quota.get("error", ""),
         "fetchedAtMs": quota.get("fetchedAtMs", 0),
+        "generatedAtMs": quota.get("generatedAtMs", 0),
         "providers": quota.get("providers", []),
         "tightest": quota.get("tightest"),
         "today": usage.get("today", {}),

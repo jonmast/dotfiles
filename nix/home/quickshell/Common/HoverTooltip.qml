@@ -25,6 +25,34 @@ PopupWindow {
 
     readonly property Item child: container.children.length > 0 ? container.children[0] : null
 
+    // Opt-in, and off for every tooltip that is only ever read. A tooltip whose
+    // content can be CLICKED cannot dismiss the moment the anchor loses hover:
+    // the popup hangs 4px below the bar, so the pointer necessarily leaves the
+    // anchor before it arrives, and the control would be unreachable.
+    //
+    // Interactive tooltips drive `requested` instead of `visible` — the popup
+    // then also stays up while the pointer is over it, with a short grace to
+    // cross the gap in either direction.
+    property bool interactive: false
+    property bool requested: false
+
+    readonly property bool pointerOn: requested || (interactive && popupHover.hovered)
+
+    onPointerOnChanged: {
+        if (pointerOn)
+            grace.stop();
+        else if (interactive)
+            grace.restart();
+    }
+
+    // Long enough to cross a 4px gap at a hand's speed, short enough that a
+    // tooltip you walked away from does not linger.
+    Timer {
+        id: grace
+
+        interval: 150
+    }
+
     anchor.item: anchorItem
     // Hang below the bar, aligned to the item that owns the tooltip.
     anchor.edges: Edges.Bottom
@@ -35,7 +63,8 @@ PopupWindow {
     implicitHeight: frame.implicitHeight
     color: "transparent"
     grabFocus: false
-    visible: false
+    // Read-only tooltips override this outright with their own hover binding.
+    visible: pointerOn || grace.running
 
     Rectangle {
         id: frame
@@ -47,6 +76,12 @@ PopupWindow {
         border.width: 1
         border.color: Theme.tooltipBorder
         radius: Theme.tooltipRadius
+
+        HoverHandler {
+            id: popupHover
+
+            enabled: root.interactive
+        }
 
         Item {
             id: container
