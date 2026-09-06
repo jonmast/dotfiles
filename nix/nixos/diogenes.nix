@@ -23,6 +23,7 @@
 
   networking.hostName = "diogenes";
   networking.networkmanager.enable = true;
+  networking.modemmanager.enable = false;
 
   # Automatic garbage collection: weekly, keep everything newer than 30 days
   # (conservative — 30d of rollback points, then prune).
