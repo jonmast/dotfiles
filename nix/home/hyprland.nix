@@ -272,6 +272,56 @@
   # other Hyprland-scoped service in this file carries the same triple.
   systemd.user.services.quickshell.Unit.PartOf = [ "graphical-session.target" ];
 
+  # Quickshell probes for a network backend exactly once, ~400ms into process
+  # startup, and caches the result for the life of the process. The probe is a
+  # D-Bus name lookup: if org.freedesktop.NetworkManager is not yet on the
+  # system bus, it logs
+  #
+  #   ERROR quickshell.network: Network will not work. Could not find an
+  #   available backend.
+  #
+  # and never retries. Quickshell.Networking.devices then stays permanently
+  # empty, so Bar/NetworkWidget.qml renders its no-device fallback — the word
+  # "disconnected" in red — on a machine whose wifi is up and routing fine.
+  # Reloading the QML does not clear it; the probe is C++ singleton state, not
+  # QML state, so only a process restart recovers.
+  #
+  # `nixos-rebuild switch` loses this race routinely: activation restarts
+  # NetworkManager.service and this unit together, and quickshell wins by a few
+  # hundred milliseconds. Observed 2026-09-05: NM starting at 13:18:45, the
+  # backend probe failing at 13:18:45.863, and the bar reading "disconnected"
+  # for the next nine hours.
+  #
+  # So gate startup on the name actually being claimed. Only the *name* is
+  # waited for, not device enumeration — once quickshell finds the backend it
+  # subscribes to NM's signals and fills the device list asynchronously, which
+  # the widget's bindings already handle (it renders "disconnected" for the
+  # first second of every cold start, then corrects itself).
+  #
+  # The wait is bounded and always succeeds. A machine with NetworkManager
+  # genuinely absent or broken should still get a bar with a dead network pill,
+  # which is the status quo — it must not get no bar at all, and it must not
+  # wedge graphical-session.target for longer than it takes to notice.
+  systemd.user.services.quickshell.Service.ExecStartPre =
+    let
+      waitForNetworkBackend = pkgs.writeShellScript "wait-for-network-backend" ''
+        i=0
+        while [ "$i" -lt 100 ]; do
+          if ${pkgs.systemd}/bin/busctl --system status \
+              org.freedesktop.NetworkManager >/dev/null 2>&1; then
+            exit 0
+          fi
+          ${pkgs.coreutils}/bin/sleep 0.1
+          i=$((i + 1))
+        done
+        echo "org.freedesktop.NetworkManager did not appear on the system bus" \
+             "within 10s; starting quickshell anyway (network pill will be dead" \
+             "until the next restart)" >&2
+        exit 0
+      '';
+    in
+    "${waitForNetworkBackend}";
+
   programs.quickshell = {
     enable = true;
     # Pinned upstream v0.3.1, not pkgs.quickshell (still 0.3.0). See the
