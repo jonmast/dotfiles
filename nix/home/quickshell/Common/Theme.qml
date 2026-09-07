@@ -5,11 +5,17 @@ import QtQuick
 
 // The Shell's single source of visual truth.
 //
-// Every value here is lifted verbatim from the waybar stylesheet that this
-// shell replaces (see `programs.waybar.style` in git history, removed by
-// issue 03). Bar parity is the contract for the first release: the numbers
-// are not "roughly the same feel", they are the same numbers. Retheming is
-// deliberately a later piece of work — do not tune these to taste here.
+// The bar values here began as verbatim copies of the waybar stylesheet this
+// shell replaced (`programs.waybar.style`, removed by issue 03). That was the
+// migration's parity contract, and it is DISCHARGED: waybar is gone, the first
+// release shipped, and issues 04-06 have since added a launcher, notifications,
+// DND and a polkit dialog it never had. Nothing here answers to a deleted
+// stylesheet any more, and provenance notes below are kept only where they
+// still explain a value's shape.
+//
+// What survives is the reason these are centralised at all: one value, one
+// place, changed on purpose. A number that moves should say why — so the next
+// reader can tell a decision from a drift.
 Singleton {
     id: root
 
@@ -56,8 +62,15 @@ Singleton {
     // The calendar tooltip was `<tt>` in waybar, i.e. the fontconfig monospace
     // alias. Qt understands "monospace" through the same fontconfig mapping.
     readonly property string monoFamily: "monospace"
-    // waybar wrapped the calendar in `<small>`, which is GTK's ~0.83x scale.
-    readonly property int tooltipFontSize: 11
+
+    // Subordinate to the bar's own text, but still comfortably readable.
+    //
+    // Tooltips are where the detail lives — the calendar, and the AI quota
+    // widget's stack of windows, token counts and cache figures. Fine print is
+    // the wrong treatment for a block of numbers you moved the pointer there to
+    // read, so this is one step down from `fontSize`, not the ~0.83x that an
+    // inherited `<small>` had it at.
+    readonly property int tooltipFontSize: 12
 
     // ---- Tooltips ------------------------------------------------------
     // waybar: bg nord0 (opaque), 1px nord3 border, 6px radius, nord4 text.
