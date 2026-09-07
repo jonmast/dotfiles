@@ -6,6 +6,7 @@
     ./linux.nix
     ./hyprland.nix
     ./aiquota.nix
+    ./googletv.nix
     ./voxtype.nix
     # Hermes Agent + Hermes Desktop (Electron app). The upstream module adds
     # `hermes` and `hermes-desktop` to home.packages, wires the launcher to

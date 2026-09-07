@@ -9,7 +9,7 @@ import qs.Common
 //
 // Order, left to right:
 //   left    workspaces, window title
-//   right   DWT, AI quota, bluetooth, audio, network, battery, clock, tray
+//   right   DWT, AI quota, Google TV, bluetooth, audio, network, battery, clock, tray
 //
 // Two of those postdate the migration:
 //
@@ -71,6 +71,8 @@ PanelWindow {
         DwtWidget {}
 
         AiQuotaWidget {}
+
+        GoogleTvWidget {}
 
         BluetoothWidget {}
 
