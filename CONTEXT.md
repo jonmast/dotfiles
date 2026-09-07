@@ -47,5 +47,5 @@ kwallet (+ kwallet-pam at SDDM), xdg-desktop-portal-kde (Secret portal, Dolphin 
 _Avoid_: assuming plasma-workspace provides agents/daemons; it isn't installed
 
 **DWT**:
-Disable-while-typing touchpad toggle; exposed as a Bar widget and $mod T bind.
+Disable-while-typing touchpad toggle; exposed as a Bar widget and $mod T bind. Config default is ON (not Hyprland's default); the toggle is a runtime override that any config reload reverts.
 _Avoid_: spelling it out in UI copy

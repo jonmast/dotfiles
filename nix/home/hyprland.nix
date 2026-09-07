@@ -123,15 +123,23 @@
         # natural_scroll on a Framework 13 touchpad only takes effect when
         # nested under `input.touchpad` — putting it in the global `input`
         # block silently no-ops on the touchpad (Hyprland issue #2458).
-        # disable_while_typing = false is the default but set explicitly
-        # so the touchpad stays active when typing into Moonlight's
-        # streamed window — the kernel's i2c-hid palm-rejection can
-        # otherwise leave the pad unresponsive for ~1s after every key.
-        # Toggle with $mainMod+T or The Shell's DWT bar widget to enable
-        # disable_while_typing for apps like Ghostty (phantom clicks).
+        # disable_while_typing ON, which is NOT Hyprland's default (false).
+        # Phantom clicks while typing — Ghostty is the worst offender — are
+        # the everyday problem; palm rejection is worth the cost.
+        #
+        # It costs something real, which is why this was false until now: the
+        # kernel's i2c-hid palm-rejection can leave the pad unresponsive for
+        # ~1s after every key, and typing into Moonlight's streamed window
+        # with the pad dead is miserable. That case is now the exception you
+        # reach for the toggle for, rather than the case the default serves.
+        #
+        # Toggle with $mainMod+T or The Shell's DWT bar widget. Both go
+        # through `hyprctl keyword`, which is a RUNTIME override — this value
+        # comes back on every config reload, so a home-manager switch always
+        # returns the pad to DWT-on.
         touchpad = {
           natural_scroll = true;
-          disable_while_typing = false;
+          disable_while_typing = true;
           # 1/2/3-finger physical click = left/right/middle (libinput default,
           # set explicitly so it survives any future libinput default flip).
           clickfinger_behavior = true;
