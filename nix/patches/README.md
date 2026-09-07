@@ -4,12 +4,12 @@ Personal patch that moves the quick-reaction chooser from the
 right-click context menu to a hover-revealed button in
 [gnome-fractal](https://gitlab.gnome.org/GNOME/fractal).
 
-## Status: **currently disabled** in `home/common.nix`
+## Status: **enabled** in `home/common.nix`
 
-The patched `pkgs.fractal.overrideAttrs` is commented out because the
-rebuild is slow. Stock `fractal` is installed instead. To re-enable:
-uncomment the `let` block at the top of `home/common.nix` and swap
-`fractal` back to `fractalPatched` in the package list.
+`fractalPatched` (a `pkgs.fractal.overrideAttrs` in the `let` block at the
+top of `home/common.nix`) is what's in `home.packages`. The rebuild is slow;
+to fall back to stock, swap `fractalPatched` for `fractal` in the package
+list.
 
 ## Regenerate
 
