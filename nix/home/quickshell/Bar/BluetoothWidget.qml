@@ -49,6 +49,26 @@ Item {
         }
     }
 
+    property bool panelOpen: false
+
+    // TapHandler rather than a MouseArea, for the same reason the audio pill
+    // uses one: handlers compose with the HoverHandler below, a MouseArea
+    // filling the item would claim the pointer and kill the tooltip.
+    TapHandler {
+        onTapped: root.panelOpen = !root.panelOpen
+    }
+
+    Popout {
+        anchorItem: root
+        opened: root.panelOpen
+        onDismissed: root.panelOpen = false
+
+        BluetoothPanel {
+            // Gates device discovery — see BluetoothPanel.
+            active: root.panelOpen
+        }
+    }
+
     HoverHandler {
         id: hover
     }

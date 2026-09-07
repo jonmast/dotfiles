@@ -178,12 +178,12 @@ Item {
                 anchors.right: parent.right
                 spacing: Theme.polkitPadding / 2
 
-                PolkitButton {
+                Button {
                     text: "Cancel"
                     onActivated: root.flow.cancelAuthenticationRequest()
                 }
 
-                PolkitButton {
+                Button {
                     text: "Authenticate"
                     primary: true
                     interactive: root.wantsResponse

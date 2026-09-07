@@ -214,6 +214,77 @@ Singleton {
     readonly property int polkitTitleFontSize: notifSummaryFontSize
     readonly property int polkitBodyFontSize: notifBodyFontSize
 
+    // ---- Bar popout panels ---------------------------------------------
+    // The click-through panels behind the audio, bluetooth and network pills
+    // (Common/Popout.qml). Same card idiom as everything else in this shell —
+    // nord0 slab, nord3 hairline, menu radius — so a panel reads as the pill
+    // it came from getting bigger, rather than as a separate application.
+    //
+    // Narrower than the launcher's 520: a panel holds a slider and a short
+    // list of device names, not a search result page. Wide enough that a
+    // typical sink description ("Family 17h/19h HD Audio Controller Analog
+    // Stereo") elides late rather than immediately.
+    readonly property int panelWidth: 340
+    readonly property int panelRadius: menuRadius
+    readonly property int panelPadding: menuPadding
+    // Between stacked groups (slider, outputs, inputs). Wider than the gap
+    // between rows inside a group, which is what makes the groups read as
+    // groups without needing a rule between them.
+    readonly property int panelSpacing: 12
+    readonly property int panelRowSpacing: 2
+    // Past this share of the output's height the panel scrolls instead of
+    // growing. Two thirds leaves the desktop underneath legible and keeps the
+    // card clear of the bottom edge; a wifi list is routinely long enough to
+    // need it.
+    readonly property real panelMaxHeightFraction: 0.66
+    readonly property int panelRowHeight: menuRowHeight
+    readonly property int panelRowRadius: menuRowRadius
+
+    readonly property color panelBackground: menuBackground
+    readonly property color panelBorder: menuBorder
+    // Text follows the notification rules rather than the launcher's: a panel
+    // is read and acted on, not skimmed while typing, so secondary text is
+    // dimmed nord4 rather than nord3-on-nord0 (see the notification note).
+    readonly property color panelForeground: nord4
+    readonly property real panelMetaOpacity: notifMetaOpacity
+    // The selected row — the active sink, the connected device. Reuses the
+    // active-workspace treatment, which is already this shell's way of saying
+    // "this is the current one".
+    readonly property color panelRowHover: nord2
+    readonly property color panelAccent: nord8
+
+    // Section labels ("Output", "Input"). The one place small type is right:
+    // they are signposts, never content.
+    readonly property int panelSectionFontSize: 11
+    readonly property int panelRowFontSize: fontSize
+
+    // Bad news inside a panel: a failed wifi association, a bluetooth pairing
+    // that was rejected. Same red as every other "this went wrong" in the bar.
+    readonly property color panelError: nord11
+
+    // Buttons (Common/Button.qml). Equal to the polkit dialog's values, which
+    // is what made promoting PolkitButton a rename rather than a retheme.
+    readonly property int buttonHeight: 30
+
+    // The radio switches at the head of the bluetooth and network panels.
+    // 2:1 is the usual switch proportion; the height is a hair under the row
+    // height so a header row is no taller than a device row.
+    readonly property int toggleHeight: 18
+    readonly property int toggleWidth: 36
+
+    // The passphrase field in the network panel. Sized like the polkit
+    // dialog's response field, which is the shell's other secret input.
+    readonly property int panelFieldHeight: polkitFieldHeight
+    readonly property color panelFieldBackground: polkitFieldBackground
+
+    // The volume slider. Taller track than the OSD's 6px because this one is
+    // a drag target, not a readout — 6px is a fiddly thing to hit with a
+    // pointer, and Fitts' law does not care how tidy it looks.
+    readonly property int panelSliderHeight: 10
+    readonly property color panelSliderTrack: osdTrack
+    readonly property color panelSliderFill: osdFill
+    readonly property color panelSliderMuted: osdMuted
+
     // ---- OSD (issue 05) ------------------------------------------------
     readonly property int osdWidth: 260
     readonly property int osdRadius: menuRadius

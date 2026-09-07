@@ -51,6 +51,31 @@ Item {
         }
     }
 
+    // Click opens the mixer panel. waybar had no equivalent — its audio module
+    // ran `pavucontrol` on click, and before that omarchy's ran a `wiremix`
+    // TUI in a floating terminal. Both are the same admission: the bar could
+    // display audio but not change it. This one can.
+    // TapHandler, not a MouseArea: a MouseArea filling the pill sits between
+    // the pointer and the WheelHandler below, and scroll-to-change-volume is
+    // the most used thing this widget does. Handlers compose; a MouseArea
+    // claims the whole item.
+    TapHandler {
+        onTapped: root.panelOpen = !root.panelOpen
+    }
+
+    property bool panelOpen: false
+
+    Popout {
+        anchorItem: root
+        opened: root.panelOpen
+        onDismissed: root.panelOpen = false
+
+        AudioPanel {
+            // Gates the peak monitor's capture stream — see AudioPanel.
+            active: root.panelOpen
+        }
+    }
+
     // waybar's pulseaudio module changed volume on scroll by `scroll-step`,
     // which defaults to 1%.
     WheelHandler {

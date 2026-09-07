@@ -46,6 +46,24 @@ Item {
         }
     }
 
+    property bool panelOpen: false
+
+    // TapHandler rather than a MouseArea — see the audio pill.
+    TapHandler {
+        onTapped: root.panelOpen = !root.panelOpen
+    }
+
+    Popout {
+        anchorItem: root
+        opened: root.panelOpen
+        onDismissed: root.panelOpen = false
+
+        NetworkPanel {
+            // Gates wifi scanning — see NetworkPanel.
+            active: root.panelOpen
+        }
+    }
+
     HoverHandler {
         id: hover
     }
