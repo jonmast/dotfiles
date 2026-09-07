@@ -43,6 +43,11 @@ PanelWindow {
 
     property bool opened: false
 
+    // Card width. Overridable because not every panel holds a list of long
+    // device names: a panel whose rows are all buttons of known width can
+    // measure itself instead — see GoogleTvWidget.
+    property int panelWidth: Theme.panelWidth
+
     signal dismissed
 
     default property alias content: holder.data
@@ -121,6 +126,13 @@ PanelWindow {
         anchors.fill: parent
         focus: true
         Keys.onEscapePressed: root.dismissed()
+
+        // Panels that want keys of their own (the TV remote's d-pad) declare
+        // Keys handlers on their root item and get them delivered here.
+        // Forwarding rather than moving focus keeps ESC working, and means a
+        // text field inside the panel still wins the keyboard the moment it
+        // takes focus — forwarding only happens while THIS item has it.
+        Keys.forwardTo: root.child ? [root.child] : []
     }
 
     Rectangle {
@@ -132,7 +144,7 @@ PanelWindow {
         y: Theme.notifMarginTop
         x: Math.max(Theme.barMarginSide, Math.min(root.width - width - Theme.barMarginSide, root.anchorCentreX - width / 2))
 
-        width: Theme.panelWidth
+        width: root.panelWidth
         // Capped, then scrolled. A wifi scan in a flat turns up twenty-odd
         // networks and a bluetooth scan sixteen devices — measured here, not
         // imagined — so an uncapped card is taller than the output it is drawn
@@ -176,6 +188,12 @@ PanelWindow {
             // stable to look.
             Item {
                 id: holder
+
+                // ESC also handled here, not only on the focus item above: a
+                // text field inside a panel holds focus while you type, and
+                // key events travel up the parent chain, which reaches this
+                // ancestor but never that sibling.
+                Keys.onEscapePressed: root.dismissed()
 
                 width: container.width
                 implicitHeight: root.child ? root.child.implicitHeight : 0
