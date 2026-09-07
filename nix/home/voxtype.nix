@@ -108,37 +108,66 @@ let
   # Do NOT bind Escape in voxtype_suppress — it makes wtype drop the first
   # character (Hyprland issue #3165). F12 is the escape hatch instead, for the
   # case where voxtype dies mid-type and never sends us back to `reset`.
-  submaps = ''
-    # Active during recording and transcription; F12 cancels.
-    submap = voxtype_recording
-    bind = , F12, exec, ${voxtype} record cancel
-    bind = , F12, submap, reset
-    # The release bind MUST be repeated here. pre_recording_command switches
-    # into this submap the instant recording starts, and a submap only sees
-    # its own binds — so the `bindr` in the default keymap goes deaf and the
-    # key release is simply lost. Recording then runs to the 60s cap and
-    # transcribes a minute of silence. (It intermittently appeared to work
-    # before this line existed: releasing inside the ~20ms before the hook
-    # landed still hit the default-keymap bind. A race, not a fix.)
-    #
-    # One line suffices now that the trigger is a lone key: there is no
-    # modmask to mismatch, so no second release-order variant is needed.
-    bindr = , XF86AudioMedia, exec, ${voxtype} record stop
-    submap = reset
+  hyprlandLua = ''
+    -- Push-to-talk: hold the Framework media key, speak, release. The press
+    -- bind starts, the `release = true` bind stops — the pairing is what makes
+    -- hold-to-talk possible without voxtype grabbing the keyboard itself.
+    --
+    -- XF86AudioMedia, not the obvious CTRL+SPACE, because a lone key has no
+    -- modmask. Hyprland matches modmask exactly on release, so every chord has
+    -- a release-order trap: with CTRL+SPACE, lifting CTRL before SPACE matched
+    -- no bind, the stop was never sent, and recording ran to the 60s cap. A
+    -- single key cannot express that bug. It also stops voxtype eating the
+    -- spacebar mid-recording, and frees CTRL+SPACE for Emacs set-mark and IME
+    -- switching.
+    --
+    -- This is the Framework's dedicated media key (confirmed via wev; the only
+    -- other free lone key was XF86RFKill, which is wired to the hardware radio
+    -- kill and would be a hostile thing to repurpose).
+    hl.bind("XF86AudioMedia", hl.dsp.exec_cmd("${voxtype} record start"))
+    hl.bind("XF86AudioMedia", hl.dsp.exec_cmd("${voxtype} record stop"), { release = true })
 
-    # Active during text output; swallows modifiers so transcribed text cannot
-    # be reinterpreted as keybinds.
-    submap = voxtype_suppress
-    bind = , SUPER_L, exec, true
-    bind = , SUPER_R, exec, true
-    bind = , Control_L, exec, true
-    bind = , Control_R, exec, true
-    bind = , Alt_L, exec, true
-    bind = , Alt_R, exec, true
-    bind = , Shift_L, exec, true
-    bind = , Shift_R, exec, true
-    bind = , F12, submap, reset
-    submap = reset
+    -- Active during recording and transcription; F12 cancels.
+    --
+    -- Under hyprlang these submaps had to be appended after every other bind,
+    -- because `submap = <name>` opened a block that swallowed everything until
+    -- `submap = reset`. `hl.define_submap` takes a function instead, so the
+    -- binds are lexically scoped and the ordering hazard is gone.
+    hl.define_submap("voxtype_recording", function()
+      -- One key, two dispatchers, so it must be a function: cancel the
+      -- recording AND leave the submap.
+      hl.bind("F12", function()
+        hl.dispatch(hl.dsp.exec_cmd("${voxtype} record cancel"))
+        hl.dispatch(hl.dsp.submap("reset"))
+      end)
+
+      -- The release bind MUST be repeated here. pre_recording_command switches
+      -- into this submap the instant recording starts, and a submap only sees
+      -- its own binds — so the release bind in the default keymap goes deaf and
+      -- the key release is simply lost. Recording then runs to the 60s cap and
+      -- transcribes a minute of silence. (It intermittently appeared to work
+      -- before this line existed: releasing inside the ~20ms before the hook
+      -- landed still hit the default-keymap bind. A race, not a fix.)
+      --
+      -- One line suffices now that the trigger is a lone key: there is no
+      -- modmask to mismatch, so no second release-order variant is needed.
+      hl.bind("XF86AudioMedia", hl.dsp.exec_cmd("${voxtype} record stop"), { release = true })
+    end)
+
+    -- Active during text output; swallows modifiers so transcribed text cannot
+    -- be reinterpreted as keybinds.
+    hl.define_submap("voxtype_suppress", function()
+      for _, key in ipairs({
+        "SUPER_L", "SUPER_R",
+        "Control_L", "Control_R",
+        "Alt_L", "Alt_R",
+        "Shift_L", "Shift_R",
+      }) do
+        hl.bind(key, hl.dsp.exec_cmd("true"))
+      end
+
+      hl.bind("F12", hl.dsp.submap("reset"))
+    end)
   '';
 in
 {
@@ -297,31 +326,11 @@ in
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  wayland.windowManager.hyprland = {
-    settings = {
-      # Push-to-talk: hold the Framework media key, speak, release. `bind`
-      # fires on press, `bindr` on release — the pairing is what makes
-      # hold-to-talk possible without voxtype grabbing the keyboard itself.
-      #
-      # XF86AudioMedia, not the obvious CTRL+SPACE, because a lone key has no
-      # modmask. Hyprland matches modmask exactly on release, so every chord
-      # has a release-order trap: with CTRL+SPACE, lifting CTRL before SPACE
-      # matched no bind, the stop was never sent, and recording ran to the 60s
-      # cap. A single key cannot express that bug. It also stops voxtype
-      # eating the spacebar mid-recording, and frees CTRL+SPACE for Emacs
-      # set-mark and IME switching.
-      #
-      # This is the Framework's dedicated media key (confirmed via wev; the
-      # only other free lone key was XF86RFKill, which is wired to the
-      # hardware radio kill and would be a hostile thing to repurpose).
-      bind = [ ", XF86AudioMedia, exec, ${voxtype} record start" ];
-      bindr = [ ", XF86AudioMedia, exec, ${voxtype} record stop" ];
-    };
-    # Submaps must come after the main keybind block: everything following a
-    # `submap = <name>` line belongs to that submap until the next
-    # `submap = reset`. extraConfig is appended last, which is what makes this
-    # safe — defining these inline in `settings` would capture whatever binds
-    # happened to be serialised after them.
-    extraConfig = submaps;
-  };
+  # Hyprland integration, as a Lua module. See nix/home/hyprland.nix for why
+  # the session config is Lua rather than hyprlang.
+  #
+  # Generated into the store rather than symlinked to the working tree like
+  # core.lua and binds.lua, because every command in it is a pinned store path
+  # — there is nothing here worth hot-reloading by hand.
+  wayland.windowManager.hyprland.extraLuaFiles.voxtype = hyprlandLua;
 }

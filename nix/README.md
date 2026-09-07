@@ -25,9 +25,10 @@ nix/
 │   ├── default.nix             # entrypoint: username, homeDirectory, stateVersion, imports
 │   ├── common.nix              # cross-platform user config: packages, firefox, gpg, direnv, xdg, fractal
 │   ├── linux.nix               # linux-only user config: nix-ld env vars, restic backup
-│   ├── hyprland.nix            # hyprland compositor: keybinds, The Shell (quickshell), hypridle/hyprlock, walker
+│   ├── hyprland.nix            # hyprland compositor: wiring for The Shell (quickshell), hypridle/hyprlock, walker
 │   ├── voxtype.nix             # voice-to-text daemon: whisper weights, push-to-talk submaps, OSD, eval scripts
 │   ├── aiquota.nix             # ai-quota script for the Bar's AI quota pill
+│   ├── hypr/                   # hyprland config in Lua — core.lua, binds.lua; symlinked out-of-store (edits need no rebuild)
 │   ├── quickshell/             # The Shell — QML tree, symlinked out-of-store (edits need no rebuild)
 │   └── scripts/                # python helpers wrapped by voxtype.nix and aiquota.nix
 ├── packages/                   # locally-defined derivations, exposed via overlay in flake.nix
@@ -49,7 +50,7 @@ Dotfile content that is not nix-managed lives in `chezmoi/` at the repo root —
 - **Adding a package not in nixpkgs:** new derivation under `nix/packages/<name>/`, then an entry in the `nixpkgs.overlays` block in `flake.nix` so it is visible to `home.packages` by name.
 - **Changing a program module (firefox, gpg, direnv):** `nix/home/common.nix`.
 - **Changing system services (pipewire, sddm, networkmanager, PAM):** `nix/nixos/diogenes.nix`. Read the comment blocks around `security.pam` and `programs.uwsm` first.
-- **Changing hyprland keybinds, hypridle/hyprlock, or walker:** `nix/home/hyprland.nix`.
+- **Changing hyprland keybinds, monitors, input or look-and-feel:** Lua under `nix/home/hypr/` (`binds.lua`, `core.lua`). Reload with `hyprctl reload`; no rebuild. Like the QML, these files are not part of any Nix generation — git is their only history. `nix/home/hyprland.nix` holds only the module wiring (hypridle/hyprlock, walker, The Shell, portals).
 - **Changing The Shell (bar, menu, notifications, OSD, polkit agent):** QML under `nix/home/quickshell/`. Live-reload with `systemctl --user restart quickshell`; no rebuild. These files are not part of any Nix generation — git is their only history.
 - **Cross-platform dotfile content (zshrc, gitconfig, nvim, alacritty):** files in `chezmoi/`. The zshrc and tmux use templates with `chezmoi.os` for os-conditional nix bits.
 - **Disabling the fractal patch** (rebuild is slow): swap `fractalPatched` for `fractal` in the `home.packages` list in `nix/home/common.nix`. See `nix/patches/README.md` for regeneration.
@@ -68,6 +69,12 @@ chezmoi apply
 
 # Reload The Shell after QML edits (no rebuild needed)
 systemctl --user restart quickshell
+
+# Reload hyprland after nix/home/hypr/*.lua edits (no rebuild needed)
+hyprctl reload
+
+# Check a hyprland config change without starting a session
+hyprland --verify-config -c ~/.config/hypr/hyprland.lua
 ```
 
 ## Dotfiles vs nix

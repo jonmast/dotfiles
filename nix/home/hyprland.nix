@@ -104,167 +104,60 @@
     # the start and quickshell/mako/hypridle/walker/elephant never launch.
     # Verified both directions with probe units.
     systemd.extraCommands = [ "systemctl --user start hyprland-session.target" ];
-    # hyprlang (legacy default) — our config is written in hyprlang syntax.
-    # Lua mode is a v1.1+ option; switching now broke the config parse
-    # ("emergency mode" on the bare session attempt). Set explicitly to
-    # silence the eval warning until we bump stateVersion to >= "26.05".
-    configType = "hyprlang";
-    settings = {
-      # Framework 13 eDP-1 panel (2256x1504, ~200 DPI). Hyprland quantizes
-      # scale to multiples of 1/120 and requires both dimensions to divide
-      # cleanly. 1.5x fails because 1504/1.5 = 1002.67 (not integer). The
-      # closest valid scale is 1.5667 (188/120) → effective 1440x960.
-      monitor = [ ",preferred,auto,1.5667" ];
-      input = {
-        kb_layout = "us";
-        follow_mouse = 1;
-        # Remap Caps Lock to Escape (holds-as-escape too — great for vim).
-        kb_options = [ "caps:escape" ];
-        # natural_scroll on a Framework 13 touchpad only takes effect when
-        # nested under `input.touchpad` — putting it in the global `input`
-        # block silently no-ops on the touchpad (Hyprland issue #2458).
-        # disable_while_typing ON, which is NOT Hyprland's default (false).
-        # Phantom clicks while typing — Ghostty is the worst offender — are
-        # the everyday problem; palm rejection is worth the cost.
-        #
-        # It costs something real, which is why this was false until now: the
-        # kernel's i2c-hid palm-rejection can leave the pad unresponsive for
-        # ~1s after every key, and typing into Moonlight's streamed window
-        # with the pad dead is miserable. That case is now the exception you
-        # reach for the toggle for, rather than the case the default serves.
-        #
-        # Toggle with $mainMod+T or The Shell's DWT bar widget. Both go
-        # through `hyprctl keyword`, which is a RUNTIME override — this value
-        # comes back on every config reload, so a home-manager switch always
-        # returns the pad to DWT-on.
-        touchpad = {
-          natural_scroll = true;
-          disable_while_typing = true;
-          # 1/2/3-finger physical click = left/right/middle (libinput default,
-          # set explicitly so it survives any future libinput default flip).
-          clickfinger_behavior = true;
-        };
+    # Lua, not hyprlang. hyprlang is deprecated upstream as of Hyprland 0.55
+    # (we run 0.56.2), and home-manager flips this default at stateVersion
+    # 26.05. Set explicitly so the format stays a decision rather than a side
+    # effect of a version number.
+    #
+    # The config itself is hand-written Lua in nix/home/hypr/, NOT the module's
+    # `settings` attrset. Two reasons, and the first is why the earlier attempt
+    # at this landed in emergency mode:
+    #
+    #   - In Lua mode `settings` renders each attribute as an `hl.<name>(...)`
+    #     call. The old hyprlang-shaped attrs would emit nonsense like
+    #     `hl["exec-once"](...)`, `hl.monitor(",preferred,auto,1.5667")` and
+    #     `hl.bind("$mainMod, RETURN, exec, ghostty")`. Flipping configType
+    #     alone cannot work; the config has to be rewritten against the Lua
+    #     API.
+    #   - `settings` is typed `attrsOf settingValueType`, a freeform any-type.
+    #     Nix validates no option name, no dispatcher and no bind syntax, so
+    #     routing the config through Nix buys nothing that hand-written Lua
+    #     does not — while costing the `_args`/`mkLuaInline` escaping dance on
+    #     every one of ~50 binds.
+    #
+    # The authoritative API reference is the stub Hyprland ships at
+    # /run/current-system/sw/share/hypr/stubs/hl.meta.lua, plus the Lua REPL in
+    # `hyprctl`.
+    configType = "lua";
+
+    extraLuaFiles = {
+      # Store paths that must be pinned rather than resolved from the session
+      # PATH. This is the one thing the Nix layer still has to contribute, so
+      # it is generated into the store; `autoLoad = false` because binds.lua
+      # requires it explicitly rather than it running on its own.
+      paths = {
+        content = ''
+          return {
+            qs = "${lib.getExe' config.programs.quickshell.package "qs"}",
+          }
+        '';
+        autoLoad = false;
       };
-      general = {
-        gaps_in = 5;
-        gaps_out = 10;
-        border_size = 2;
-      };
-      decoration = { rounding = 8; };
-      # Compositor-specific env vars. Kept here rather than in
-      # home.sessionVariables so they stay scoped to a Hyprland session (the
-      # original reason was to avoid leaking into Plasma; Plasma is gone, but
-      # scoping them to the compositor is still the right shape — they are
-      # wrong for a TTY or a non-Hyprland login).
-      env = [
-        "QT_QPA_PLATFORM,wayland;xcb"
-        "GDK_BACKEND,wayland,x11"
-        "SDL_VIDEODRIVER,wayland"
-        "MOZ_ENABLE_WAYLAND,1"
-        "XDG_CURRENT_DESKTOP,Hyprland"
-        "XDG_SESSION_TYPE,wayland"
-        "XCURSOR_THEME,phinger-cursors-dark"
-        "XCURSOR_SIZE,24"
-      ];
-      # The Shell is started by the HM-managed systemd user service
-      # (programs.quickshell.systemd.enable below) — do NOT also exec-once it,
-      # or you'll get two instances fighting over the layer-shell bar surface.
-      # This is also why the boot check for issue 03 includes a logout/re-login
-      # cycle: a second instance only shows up on the second session.
-      exec-once = [ "swaybg -i ~/.config/hypr/wallpaper.jpg -m fill" ];
-      # $mod = SUPER (Hyprland's default $mainMod; explicit for clarity)
-      "$mainMod" = "SUPER";
-      bind = [
-        "$mainMod, RETURN, exec, ghostty"
-        # Unified nixpkgs/NixOS options search (nix/packages/nix-search).
-        # Opens nix-search in ghostty; Enter copies the name to clipboard.
-        "$mainMod, slash, exec, ghostty -e nix-search"
-        # The Shell's launcher menu (issue 04). `qs ipc call` reaches the
-        # already-running shell over its IPC socket; `-c shell` names the
-        # config, matching `activeConfig` below. Measured at ~35ms round trip.
-        #
-        # If the shell is not running this prints an error and does nothing —
-        # which is the honest failure mode, since without the shell there is no
-        # launcher to open. `walker` is deliberately NOT a fallback here: two
-        # launchers on one bind is how the demotion would quietly undo itself.
-        "$mainMod, D, exec, ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call menu toggle"
-        # The Shell's notification history and do-not-disturb (issue 05). Same
-        # IPC path as the menu above, and the same honest failure mode: with
-        # no shell running there is nothing to show and nothing to silence.
-        #
-        # DND on its own keybind rather than sharing one with the history
-        # panel, because the two get used at completely different moments —
-        # and because an accidental DND is exactly the state that is hard to
-        # notice. The bar grows a DND indicator while it is on.
-        "$mainMod, N, exec, ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call notifications toggleHistory"
-        "$mainMod SHIFT, N, exec, ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call notifications toggleDnd"
-        "$mainMod, Q, killactive"
-        "$mainMod, E, exec, dolphin"
-        "$mainMod, V, togglefloating"
-        # Unchanged by issue 04: clipboard history is the one job walker keeps.
-        "$mainMod SHIFT, V, exec, walker -m clipboard"
-        "$mainMod, F, fullscreen"
-        "$mainMod, P, pseudo"
-        "$mainMod, J, layoutmsg, togglesplit"
-        "$mainMod, left, movefocus, l"
-        "$mainMod, right, movefocus, r"
-        "$mainMod, up, movefocus, u"
-        "$mainMod, down, movefocus, d"
-        "$mainMod SHIFT, left, movewindow, l"
-        "$mainMod SHIFT, right, movewindow, r"
-        "$mainMod SHIFT, up, movewindow, u"
-        "$mainMod SHIFT, down, movewindow, d"
-        "$mainMod, 1, workspace, 1"
-        "$mainMod, 2, workspace, 2"
-        "$mainMod, 3, workspace, 3"
-        "$mainMod, 4, workspace, 4"
-        "$mainMod, 5, workspace, 5"
-        "$mainMod, 6, workspace, 6"
-        "$mainMod, 7, workspace, 7"
-        "$mainMod, 8, workspace, 8"
-        "$mainMod, 9, workspace, 9"
-        "$mainMod SHIFT, 1, movetoworkspace, 1"
-        "$mainMod SHIFT, 2, movetoworkspace, 2"
-        "$mainMod SHIFT, 3, movetoworkspace, 3"
-        "$mainMod SHIFT, 4, movetoworkspace, 4"
-        "$mainMod SHIFT, 5, movetoworkspace, 5"
-        "$mainMod SHIFT, 6, movetoworkspace, 6"
-        "$mainMod SHIFT, 7, movetoworkspace, 7"
-        "$mainMod SHIFT, 8, movetoworkspace, 8"
-        "$mainMod SHIFT, 9, movetoworkspace, 9"
-        "$mainMod SHIFT, E, exit"
-        # hyprctl returns {"int": 0|1} for this option — no `.bool` field.
-        "$mainMod, T, exec, hyprctl keyword input:touchpad:disable_while_typing $(if [ \"$(hyprctl getoption input:touchpad:disable_while_typing -j | jq -r .int)\" = '0' ]; then echo true; else echo false; fi)"
-        ", Print, exec, grim -g \"$(slurp)\" - | wl-copy"
-      ];
-      bindl = [
-        ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
-        ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
-        ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-        ", XF86AudioPlay, exec, playerctl play-pause"
-        ", XF86AudioNext, exec, playerctl next"
-        ", XF86AudioPrev, exec, playerctl previous"
-        # Brightness pushes its OSD over IPC (issue 05). Volume does not need
-        # to: Pipewire publishes volume and mute as properties, so The Shell
-        # watches them and the three audio binds above are untouched. A
-        # backlight has no equivalent change event worth having, so the bind
-        # tells the shell to look.
-        #
-        # `&&`, so a failed `brightnessctl` does not raise an OSD claiming a
-        # brightness that was never set. The `qs` call is last and its own
-        # failure costs only the OSD — which is the ordering the plan asked
-        # for: an unfinished OSD must never cost working hardware keys.
-        ", XF86MonBrightnessUp, exec, brightnessctl set 5%+ && ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call osd brightness"
-        ", XF86MonBrightnessDown, exec, brightnessctl set 5%- && ${lib.getExe' config.programs.quickshell.package "qs"} -c shell ipc call osd brightness"
-      ];
-      # Touchpad gestures: 3-finger horizontal swipe to change workspace.
-      # Hyprland gesture syntax is `fingers, direction, action` (not
-      # `swipe, fingers, ...`). `horizontal` is a direction that means
-      # "any horizontal swipe", and `workspace` automatically steps in
-      # the swipe direction — no `e+1` / `e-1` needed.
-      gesture = [
-        "3, horizontal, workspace"
-      ];
+
+      # Deployed as out-of-store symlinks to the working tree — the same trick
+      # programs.quickshell uses for the QML below. Hyprland reloads its config
+      # when the file changes, so edits go live with no rebuild at all
+      # (`hyprctl reload` forces it).
+      #
+      # Same trade as the QML, and taken deliberately: these files are in no
+      # Nix generation, so a generation rollback will NOT roll them back, and
+      # git is their only history. Safe for Hyprland specifically, which only
+      # reads its config and never rewrites it — do not extend this to config
+      # an application persists itself.
+      core.content = config.lib.file.mkOutOfStoreSymlink
+        "${config.home.homeDirectory}/.dotfiles/nix/home/hypr/core.lua";
+      binds.content = config.lib.file.mkOutOfStoreSymlink
+        "${config.home.homeDirectory}/.dotfiles/nix/home/hypr/binds.lua";
     };
   };
 
