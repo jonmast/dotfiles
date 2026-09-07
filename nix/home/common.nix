@@ -16,7 +16,9 @@ in
     chezmoi
     clippy
     delta
+    eza
     dig
+    fd
     ffmpeg
     file
     fluxcd
@@ -63,7 +65,7 @@ in
     starship
     strace
     tmux
-    tmuxai
+    tuicr
     unzip
     usbutils
     uv
