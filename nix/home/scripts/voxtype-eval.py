@@ -492,7 +492,12 @@ def wav_duration(path: Path) -> float:
         return w.getnframes() / w.getframerate()
 
 
-TRANSCRIPT_LINE = re.compile(r'Transcription completed in ([\d.]+)s: "(.*)"')
+# Whisper logs "Transcription completed in 1.29s: ...", the ONNX engines prefix
+# their own name and lowercase the verb -- "Parakeet Tdt transcription completed
+# in 0.31s: ...". Matching only the capitalised form silently fell through to
+# wall-clock, which for those engines includes a ~3s model load and made them
+# look an order of magnitude slower than they are.
+TRANSCRIPT_LINE = re.compile(r'[Tt]ranscription completed in ([\d.]+)s: "(.*)"')
 
 
 def transcribe(

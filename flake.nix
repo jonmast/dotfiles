@@ -43,6 +43,20 @@
       url = "github:nubjs/nub";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Voxtype — taken from upstream rather than nixpkgs for the `onnx` package.
+    # nixpkgs builds voxtype with no cargo features, so its Parakeet backend is
+    # absent: `--model parakeet-tdt-0.6b-v3` there logs "Unknown model", falls
+    # back to whisper base.en, and looks like it worked. This input is what
+    # makes engine = "parakeet" possible at all (nix/home/voxtype.nix).
+    #
+    # Costs a ~280-derivation source build on every rev bump, all of it small
+    # Rust crates: onnxruntime itself is a cached nixpkgs dependency, linked
+    # dynamically via the parakeet-load-dynamic feature rather than vendored.
+    voxtype = {
+      url = "github:peteonrails/voxtype/v1.0.1";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = { self, nixpkgs, home-manager, nixpkgs-orca, nub, ... }@inputs:

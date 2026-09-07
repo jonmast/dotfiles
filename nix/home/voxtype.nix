@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, inputs, ... }:
 
 let
   # Whisper weights, fetched declaratively instead of via `voxtype setup
@@ -14,15 +14,105 @@ let
     hash = "sha256-oDd5yG3zMjB19eeWyyzlAp8A7Ihp7uP9+4l6/jbG0AI=";
   };
 
-  # pkgs.voxtype is the CPU (AVX) whisper.cpp build and is on cache.nixos.org.
-  # The upstream flake also offers `vulkan`/`rocm` variants that compile
-  # whisper.cpp's GGML Vulkan backend, but nothing there is cached — it is a
-  # 258-derivation source build, repeated on every input bump — and this
-  # machine's GPU is a Phoenix1 iGPU sharing system RAM, so the win would be
-  # modest. If dictation latency ever becomes annoying, that is the knob:
-  # add the flake input and set this to `voxtype.packages.${system}.vulkan`.
-  # Nothing else in this file changes.
-  package = pkgs.voxtype;
+  # The `onnx` package, not pkgs.voxtype: nixpkgs builds with no cargo
+  # features, so Parakeet is simply absent there — `--model
+  # parakeet-tdt-0.6b-v3` logs "Unknown model", silently loads whisper
+  # base.en, and looks like it worked. This one reports
+  # `Features: parakeet, moonshine, sensevoice, paraformer, dolphin,
+  # omnilingual, cohere`, and whisper stays available because whisper-rs is an
+  # unconditional dependency rather than a feature — one binary, both engines,
+  # which is what let the two be compared on identical everything else.
+  #
+  # ~280 derivations to build, all small Rust crates; onnxruntime comes
+  # prebuilt from cache.nixos.org because upstream links it dynamically
+  # (parakeet-load-dynamic) instead of vendoring it.
+  #
+  # No GPU variant. Whisper could use `vulkan` (GGML has a vendor-neutral
+  # Vulkan backend), but ONNX Runtime has no Vulkan execution provider at all,
+  # so Parakeet's only GPU path is ROCm/MIGraphX — and this machine's iGPU is
+  # gfx1103 (Phoenix1, confirmed via /sys/class/kfd), which ROCm does not
+  # officially support. Parakeet here is CPU-only by construction, and at
+  # 0.21s per clip that is entirely fine.
+  package = inputs.voxtype.packages.${pkgs.stdenv.hostPlatform.system}.onnx;
+
+  # Parakeet weights: the transcription engine as of the 2026-09 bake-off.
+  #
+  # Assembled here rather than downloaded because `voxtype setup --download`
+  # cannot fetch them at all — models.voxtype.io sits behind a Cloudflare bot
+  # challenge that answers curl with a 403 interstitial. (That is the whole
+  # story behind the half-empty models directory this replaced.)
+  #
+  # Not upstream's own weights either. voxtype's catalog points at
+  # istupakov/parakeet-tdt-0.6b-v3-onnx, whose int8 build is measurably broken:
+  # scored on the voxtype-eval corpus it gives 3.79% CER against fp32's 2.08%,
+  # with meaning-changing substitutions ("grill"->"girl", "auth"->"off") and
+  # one clip transcribed as nothing at all. Upstream FLEURS numbers agree —
+  # 19.40% WER vs 12.85% for fp32.
+  #
+  # These are Olicorne's requantisation of the same NVIDIA model, which fixes
+  # exactly that. Measured on the 47-clip corpus:
+  #
+  #   engine                        WER    CER*   resident
+  #   whisper base.en (previous)   9.6%   3.12%     250 MB
+  #   parakeet fp32                9.4%   2.08%    2209 MB
+  #   parakeet nbits8 (this)       9.8%   2.08%    1504 MB
+  #
+  #   * CER over space-stripped text: word-boundary splits ("tool tips" for
+  #     "tooltips") are free, since the consumer of this dictation is an LLM
+  #     prompt that recovers them. Plain WER penalises them and understates
+  #     Parakeet's lead.
+  #
+  # 46 of 47 clips come out byte-identical to the full fp32 model, for a third
+  # less memory. The cost over whisper is ~1.25GB resident, bought for a 6x
+  # latency cut (1.33s -> 0.21s) and a third fewer errors.
+  #
+  # CAVEAT, and the reason every file is pinned by hash: this is a one-person
+  # repo (143 downloads/month) with four breaking changes in the fortnight
+  # before it was adopted — files withdrawn then restored, the repo renamed,
+  # and the contents of `encoder-model.int8.onnx` swapped underneath the name.
+  # Pinning means a change upstream is a loud hash mismatch here, never a
+  # silent model swap. Expect to re-pin; `nix build` will tell you when.
+  parakeetModel =
+    let
+      repo = "https://huggingface.co/Olicorne/parakeet-tdt-0.6b-v3-optimized-onnx/resolve/main";
+      get = path: hash: pkgs.fetchurl { url = "${repo}/${path}"; inherit hash; };
+
+      # The canonical name upstream's loaders auto-pick, currently a
+      # MatMulNBits 8-bit encoder. Deliberately taking the canonical slot
+      # rather than the pinned-recipe alternatives (`w4a8`, `int8-lite`), so
+      # improvements arrive on the next re-pin.
+      encoder = get "int8/encoder-model.int8.onnx"
+        "sha256-UMHpuFiMVVDe8b+k7P4fP7PSjgbZrDrlUScb+lkyAh0=";
+
+      # fp32 decoder, not the int8 one beside the encoder: no decoder ships at
+      # the MatMulNBits widths, and this is the pairing upstream benchmarks.
+      # Worth the 72MB — it took fidelity from 43/47 to 46/47 exact matches
+      # against full fp32 for +29MB resident, and fixed "sub agent"/"subagent".
+      # Graph and weights are separate files that must land in one directory.
+      decoder = get "fp32/decoder_joint-model.onnx"
+        "sha256-D1HOFebHGVAeHobz/1Inwvev8FcJuGCnNXJ8FUfbxQY=";
+      decoderData = get "fp32/decoder_joint-model.onnx.data"
+        "sha256-ZGWxpbMptR8kPeWFAoq+M36NOhlMCZLA3mxq7MFFb+8=";
+
+      vocab = get "vocab.txt"
+        "sha256-1YVEZ56kvGrFY9H1Ret9R0vWz6Rn8KbiwdwcfTfjw10=";
+      modelConfig = get "config.json"
+        "sha256-ZmkDx2uXmMrywhCv1PbNYLCKjb+YAOyNejvA0hSKxGY=";
+      preprocessor = get "nemo128.onnx"
+        "sha256-qf3hSG6/zAjzKNda1GEMZ4Nf6ljHO6V+Mgmm9s8Bnp8=";
+    in
+    # A directory, not a file: unlike whisper's single .bin, the Parakeet
+    # loader wants encoder, decoder, vocabulary, config and mel preprocessor
+    # side by side, and resolves them by exact filename.
+    pkgs.runCommand "parakeet-tdt-0.6b-v3-nbits8" { } ''
+      mkdir -p $out
+      cp ${encoder}      $out/encoder-model.int8.onnx
+      cp ${decoder}      $out/decoder_joint-model.onnx
+      cp ${decoderData}  $out/decoder_joint-model.onnx.data
+      cp ${vocab}        $out/vocab.txt
+      cp ${modelConfig}  $out/config.json
+      cp ${preprocessor} $out/nemo128.onnx
+    '';
 
   voxtype = lib.getExe' package "voxtype";
 
@@ -44,15 +134,28 @@ let
   # supervisor gave up after three tries in 5s.
   #
   # Both halves are ours to supply: point the frontend at quickshell (below)
-  # and install the QML here. Taken from `package.src` rather than a fresh
+  # and install the QML here. Taken from the flake input rather than a fresh
   # fetch precisely because that is the same source the binary was built
   # from — the QML talks to the daemon over a versioned state file and audio
   # socket, so a mismatched tree is the one real hazard, and this makes a
   # mismatch impossible by construction.
-  osdQml = "${package.src}/quickshell";
+  #
+  # `inputs.voxtype`, not `package.src`: the packages the flake exposes are
+  # symlinkJoin wrappers (they add ORT_DYLIB_PATH and the runtime PATH), and a
+  # symlinkJoin inherits only `meta` from what it wraps, so `package.src` does
+  # not exist. The input itself is the v1.0.1 tree the build used.
+  osdQml = "${inputs.voxtype}/quickshell";
 
-  # Prompt-tuning harness for `whisper.initial_prompt` (unset above, and the
-  # point of this is to find out what it should be).
+  # Transcription-quality harness. Built to tune `whisper.initial_prompt`; the
+  # answer it produced was "don't". Across a 47-clip corpus the best prompt
+  # bought 0.4 points of WER for 22% more decode time, and seven terms
+  # ("Copilot", "symlink", "waybar", ...) were missed by every variant
+  # including the unprompted control — a substitution problem a decoder hint
+  # cannot fix. `initial_prompt` is therefore still unset, deliberately.
+  #
+  # Its second use is the one that paid: results are namespaced by engine, so
+  # `--engine`/`--bin` can score a different binary against the same corpus.
+  # That is how the Parakeet switch above was decided rather than guessed.
   #
   # It drives the same `voxtype` binary this file installs, via
   # `voxtype --initial-prompt <P> transcribe <clip>` — a global flag, so every
@@ -195,7 +298,7 @@ in
 
   xdg.configFile."voxtype/config.toml".source =
     (pkgs.formats.toml { }).generate "voxtype-config.toml" {
-      engine = "whisper";
+      engine = "parakeet";
       # $XDG_RUNTIME_DIR/voxtype/state, written on every transition between
       # idle/recording/transcribing. `voxtype record toggle` and `voxtype
       # status` both need it, and it is the hook a bar widget would read.
@@ -211,6 +314,25 @@ in
         max_duration_secs = 60;
       };
 
+      parakeet = {
+        # Absolute store path to the assembled directory above.
+        model = "${parakeetModel}";
+        # TDT, not CTC. TDT emits cased, punctuated text; CTC is char-level and
+        # would need a separate punctuation pass to be usable as dictation.
+        # Auto-detected from the directory, but naming it makes a silently
+        # wrong detection impossible.
+        model_type = "tdt";
+        # Keep it resident. This is the expensive knob now: ~1.5GB held for the
+        # session. On-demand loading is not an escape hatch — Parakeet takes
+        # 3.0s to load versus whisper's 0.12s, so paying it per dictation would
+        # be far worse than the 1.33s whisper transcription this replaced.
+        on_demand_loading = false;
+      };
+
+      # Whisper stays configured though `engine` above selects Parakeet: the
+      # binary supports both, `--engine whisper` is a one-flag fallback if a
+      # weights re-pin ever goes bad, and voxtype-eval needs a working whisper
+      # config to keep scoring the two against each other. 142MB in the store.
       whisper = {
         # Absolute store path, so this never depends on anything having been
         # downloaded into ~/.local/share/voxtype/models.
@@ -240,6 +362,10 @@ in
         # specific and does not apply to base.en above — but it is the first
         # thing to suspect if transcripts ever start stuttering, and the
         # reason this must be revisited when changing `model`.
+        #
+        # Inert while engine = "parakeet": this works around whisper padding
+        # every clip to a 30s mel window, which is an architectural quirk
+        # Parakeet does not have. It matters again only via --engine whisper.
         context_window_optimization = true;
       };
 
