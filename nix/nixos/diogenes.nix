@@ -1,6 +1,6 @@
 # NixOS system configuration for diogenes.
 # Migrated from /etc/nixos/configuration.nix.
-{ config, pkgs, lib, ... }:
+{ pkgs, ... }:
 
 {
   imports = [
@@ -20,6 +20,7 @@
   # device, so boot.resumeDevice adds resume= and resume_offset= to the kernel
   # cmdline and the resume happens before init.
   boot.resumeDevice = "/dev/mapper/luks-00d634db-fbb3-4fc3-aa29-397b289e0526";
+  boot.tmp.cleanOnBoot = true;
 
   networking.hostName = "diogenes";
   networking.networkmanager.enable = true;
@@ -32,7 +33,6 @@
     dates = "weekly";
     options = "--delete-older-than 30d";
   };
-  nix.settings.auto-optimise-store = true;
 
   # Set your time zone.
   time.timeZone = "America/New_York";
@@ -246,18 +246,7 @@
     };
   };
 
-  # UPower — required by The Shell's battery widget (issue 03).
-  #
-  # This is a genuine new dependency, not a tidy-up. waybar's battery module
-  # read /sys/class/power_supply directly, so the bar showed a battery on a
-  # host that has never had UPower installed. Quickshell's battery service is
-  # UPower-only (`Quickshell.Services.UPower`), and with no daemon it fails
-  # quietly:
-  #     Could not launch service org.freedesktop.UPower:
-  #     (ServiceUnknown, The name is not activatable)
-  # leaving `UPower.displayDevice` inert and the widget blank rather than
-  # erroring. Caught by running the shell against the live session before
-  # switching, not by eval — nothing about this is a build-time failure.
+  # UPower — required by battery widget
   services.upower.enable = true;
 
   # Podman
@@ -306,14 +295,17 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  environment.systemPackages = with pkgs; [
+  environment.systemPackages = [
   ];
 
   programs.nix-ld.enable = true;
   programs.kdeconnect.enable = true;
 
   nix = {
-    settings.experimental-features = [ "nix-command" "flakes" ];
+    settings = {
+      experimental-features = [ "nix-command" "flakes" ];
+      auto-optimise-store = true;
+    };
   };
 
   system.stateVersion = "25.11";
