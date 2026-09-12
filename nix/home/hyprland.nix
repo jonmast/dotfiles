@@ -46,6 +46,7 @@
     kdePackages.kwallet
     kdePackages.kwallet-pam
     polkit
+    libnotify      # notify-send, for Common/BoundaryAlert.qml
   ];
 
   # Leak-prevention (was a v1.1 TODO, fixed structurally by uwsm — ADR 0003):
