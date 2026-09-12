@@ -28,6 +28,9 @@ Item {
     // alarmed and your actual pattern is not.
     property var bands: []
 
+    // When set, the named lane is brightened and the others dimmed.
+    property string hoveredLane: ""
+
     property int bandThickness: 7
     property int bandGap: 3
 
@@ -102,10 +105,26 @@ Item {
         return n;
     }
 
+    // Exposed lane radii (centres) so the caller can do hit-testing, e.g. a
+    // tooltip that explains which mark the pointer is over.
+    readonly property real paceRadius: {
+        const outer = width / 2 - 1;
+        return outer - paceThickness / 2;
+    }
+    readonly property real usageRadius: {
+        const outer = width / 2 - 1;
+        return outer - paceThickness - markGap - bandThickness / 2;
+    }
+    readonly property real clockRadius: {
+        const outer = width / 2 - 1;
+        return outer - paceThickness - markGap - bandThickness - markGap - clockThickness / 2;
+    }
+
     implicitWidth: 112
     implicitHeight: 112
 
     onBandsChanged: canvas.requestPaint()
+    onHoveredLaneChanged: canvas.requestPaint()
     onWidthChanged: canvas.requestPaint()
     onBandThicknessChanged: canvas.requestPaint()
     onClockDashChanged: canvas.requestPaint()
@@ -128,15 +147,23 @@ Item {
             // Draws a track plus a value arc in one lane. Every lane is the
             // same shape of thing, so they share one routine — which is also
             // what guarantees they never bleed into each other.
-            function lane(radius, thickness, pct, colour, dashed, rounded) {
+            //
+            // When `hovered` is true the arc is brightened with a white
+            // overlay; when another lane IS hovered the arc is dimmed. Both
+            // effects are light enough to read through but make the focused
+            // lane unambiguous.
+            function lane(radius, thickness, pct, colour, dashed, rounded, hovered) {
+                const dimmed = root.hoveredLane !== "" && !hovered;
                 ctx.setLineDash([]);
                 ctx.lineCap = "butt";
                 ctx.lineWidth = thickness;
 
+                ctx.globalAlpha = dimmed ? 0.35 : 1.0;
                 ctx.beginPath();
                 ctx.arc(cx, cy, radius, 0, Math.PI * 2);
                 ctx.strokeStyle = root.laneTrack;
                 ctx.stroke();
+                ctx.globalAlpha = 1.0;
 
                 if (pct == null || isNaN(pct))
                     return;
@@ -144,6 +171,7 @@ Item {
                 if (v <= 0)
                     return;
 
+                ctx.globalAlpha = dimmed ? 0.35 : 1.0;
                 ctx.beginPath();
                 if (dashed)
                     ctx.setLineDash([root.clockDash, root.clockDashGap]);
@@ -152,6 +180,16 @@ Item {
                 ctx.strokeStyle = colour;
                 ctx.stroke();
                 ctx.setLineDash([]);
+
+                // Brighten the hovered lane with a soft white overlay.
+                if (hovered && !dimmed) {
+                    ctx.globalAlpha = 0.15;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius, start, start + Math.PI * 2 * v / 100);
+                    ctx.strokeStyle = "white";
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1.0;
             }
 
             const count = Math.min(root.bands.length, root.maxBands);
@@ -166,9 +204,13 @@ Item {
 
                 const known = band.known === true;
 
-                lane(paceR, root.paceThickness, known ? band.pacePct : null, Qt.rgba(root.paceColor.r, root.paceColor.g, root.paceColor.b, band.paceOpacity != null ? band.paceOpacity : 1), false, false);
+                const hPace = root.hoveredLane === "pace";
+                const hUsage = root.hoveredLane === "usage";
+                const hClock = root.hoveredLane === "clock";
 
-                lane(usageR, root.bandThickness, known ? band.pct : null, band.tone, false, true);
+                lane(paceR, root.paceThickness, known ? band.pacePct : null, Qt.rgba(root.paceColor.r, root.paceColor.g, root.paceColor.b, band.paceOpacity != null ? band.paceOpacity : 1), false, false, hPace);
+
+                lane(usageR, root.bandThickness, known ? band.pct : null, band.tone, false, true, hUsage);
 
                 // The clock lane is drawn whenever there is a reading, even
                 // when it agrees with the profile exactly. It used to appear
@@ -181,7 +223,7 @@ Item {
                 // When the two coincide the arcs are equal length, which is
                 // itself the correct reading: no usage profile, so the clock is
                 // all the plugin had to go on.
-                lane(clockR, root.clockThickness, known ? band.clockPct : null, Qt.rgba(root.clockColor.r, root.clockColor.g, root.clockColor.b, 0.55), true, false);
+                lane(clockR, root.clockThickness, known ? band.clockPct : null, Qt.rgba(root.clockColor.r, root.clockColor.g, root.clockColor.b, 0.55), true, false, hClock);
             }
         }
     }

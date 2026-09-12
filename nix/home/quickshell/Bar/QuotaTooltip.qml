@@ -34,6 +34,11 @@ Column {
 
     readonly property int cardWidth: 178
 
+    // The width the content is actually built for: one row of provider cards,
+    // not a single card. The hosting Popout sizes its panel from this — same
+    // measured-content idiom as GoogleTvPanel's `contentWidth`.
+    readonly property int contentWidth: providerRow.implicitWidth
+
     // Clock-lane dash geometry. Declared here rather than left to
     // `ConcentricRings`' own defaults because the key at the foot of the
     // tooltip has to draw the same rhythm, and two copies of these numbers
@@ -105,6 +110,8 @@ Column {
     spacing: 12
 
     Row {
+        id: providerRow
+
         spacing: 8
 
         Repeater {
@@ -178,8 +185,62 @@ Column {
                     }
 
                     Item {
+                        id: ringArea
                         width: parent.width
                         height: 112
+
+                        // Hover detection for the visual effect, driven by the
+                        // same distance-from-centre logic the click handler uses.
+                        readonly property string hoveredLane: {
+                            if (!ringMouse.containsMouse)
+                                return "";
+                            const dx = ringMouse.mouseX - width / 2;
+                            const dy = ringMouse.mouseY - height / 2;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (Math.abs(dist - rings.paceRadius) <= rings.paceThickness / 2 + 2)
+                                return "pace";
+                            if (Math.abs(dist - rings.usageRadius) <= Theme.quotaRingThickness / 2 + 2)
+                                return "usage";
+                            if (Math.abs(dist - rings.clockRadius) <= rings.clockThickness / 2 + 2)
+                                return "clock";
+                            return "";
+                        }
+
+                        property string selectedLane: ""
+
+                        MouseArea {
+                            id: ringMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: ringArea.hoveredLane !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: {
+                                const lane = ringArea.hoveredLane;
+                                ringArea.selectedLane = (lane === ringArea.selectedLane) ? "" : lane;
+                            }
+                        }
+
+                        // Lane explainer, anchored to the ring. Only possible
+                        // now that we are in a PanelWindow — a HoverTooltip
+                        // inside a PopupWindow (the old tooltip path) could not
+                        // resolve its anchorItem.
+                        HoverTooltip {
+                            anchorItem: ringArea
+                            visible: ringArea.hoveredLane !== ""
+
+                            Text {
+                                text: {
+                                    switch (ringArea.hoveredLane) {
+                                    case "pace": return "expected pace — where you should be based on your usage profile";
+                                    case "usage": return "used — current quota consumed";
+                                    case "clock": return "clock — where a linear rate would put you by now";
+                                    default: return "";
+                                    }
+                                }
+                                color: Theme.foreground
+                                font.pixelSize: Theme.tooltipFontSize
+                                renderType: Text.NativeRendering
+                            }
+                        }
 
                         ConcentricRings {
                             id: rings
@@ -193,6 +254,7 @@ Column {
                             bandThickness: Theme.quotaRingThickness
                             clockDash: root.clockDash
                             clockDashGap: root.clockDashGap
+                            hoveredLane: ringArea.selectedLane || ringArea.hoveredLane
                             bands: {
                                 const r = card.selected;
                                 if (!r)
@@ -208,6 +270,31 @@ Column {
                                     }
                                 ];
                             }
+                        }
+
+                        // Click-to-reveal lane description. Sits at the
+                        // bottom of the ring area, below the clock lane,
+                        // inside the existing 112px height.
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 1
+                            visible: ringArea.selectedLane !== ""
+                            text: {
+                                switch (ringArea.selectedLane) {
+                                case "pace": return "expected pace — where you should be based on your usage profile";
+                                case "usage": return "used — current quota consumed";
+                                case "clock": return "clock — where a linear rate would put you by now";
+                                default: return "";
+                                }
+                            }
+                            color: Theme.notifForeground
+                            opacity: 0.55
+                            font.pixelSize: 8
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideRight
+                            renderType: Text.NativeRendering
                         }
 
                         // The centre is the selected window's CURRENT usage —
@@ -265,6 +352,8 @@ Column {
                             renderType: Text.NativeRendering
                         }
                     }
+
+
 
                     Rectangle {
                         anchors.horizontalCenter: parent.horizontalCenter

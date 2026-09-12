@@ -27,10 +27,11 @@ Item {
     readonly property bool stale: record ? record.stale === true : false
     readonly property bool ok: record ? record.ok === true : false
 
-    // Ticks the reset countdowns in the tooltip. Only runs while the tooltip is
-    // up — a bar that wakes every second to recompute text nobody is reading is
-    // exactly the kind of idle drain that shortens battery life on a laptop.
+    // Ticks the reset countdowns in the panel. Only runs while the panel is
+    // open — a bar that wakes every second to recompute text nobody is reading
+    // is exactly the kind of idle drain that shortens battery life on a laptop.
     property double now: Date.now()
+    property bool panelOpen: false
 
     visible: record !== null
     implicitWidth: visible ? pill.implicitWidth : 0
@@ -136,10 +137,10 @@ Item {
 
     Timer {
         interval: 1000
-        // Keyed to the tooltip rather than to `hover`, because the tooltip
+        // Keyed to the panel rather than to `hover`, because the panel
         // outlives the pill's hover: once the pointer is inside the popup
         // clicking a legend row, the countdowns must keep ticking.
-        running: tooltip.visible
+        running: popout.opened
         repeat: true
         triggeredOnStart: true
         onTriggered: root.now = Date.now()
@@ -176,27 +177,26 @@ Item {
         }
     }
 
-    HoverHandler {
-        id: hover
-    }
-
-    // A person asking for fresh numbers overrules the reuse window, the same way
-    // the admin panel's refresh button does. This is the only path that can
-    // deliberately spend a rate-limited request.
     TapHandler {
-        onTapped: forceFetch.running = true
+        onTapped: root.panelOpen = !root.panelOpen
     }
 
-    HoverTooltip {
-        id: tooltip
+    Popout {
+        id: popout
 
         anchorItem: root
-        // The legend rows inside are clickable, so the popup has to survive the
-        // pointer crossing the gap between the pill and itself.
-        interactive: true
-        requested: hover.hovered
+        opened: root.panelOpen
+        onDismissed: root.panelOpen = false
+        // The tooltip body is a row of provider cards three `cardWidth`s wide,
+        // not one — the default panel width would either clip the row or leave
+        // the single-card measurement hugging the left edge. Sizing from the
+        // row itself keeps it right if the provider count ever changes. Same
+        // measured-content idiom as GoogleTvWidget.
+        panelWidth: body.contentWidth + Theme.panelPadding * 2
 
         QuotaTooltip {
+            id: body
+
             host: root
             record: root.record
             now: root.now
