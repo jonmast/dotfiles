@@ -2,6 +2,7 @@ pragma Singleton
 
 import Quickshell
 import Quickshell.Io
+import qs.Common
 
 // Backlight level, read through `brightnessctl` (issue 05).
 //
@@ -58,10 +59,14 @@ Singleton {
             if (code !== 0)
                 return;
 
-            // Still checks the class field rather than trusting the flag:
-            // a line that is not a backlight is not a screen brightness, and
-            // showing one as if it were is worse than showing nothing.
-            for (const line of output.text.trim().split("\n")) {
+            const text = output.text.trim();
+
+            // Empty output = no backlight device, not a failure.
+            if (text === "")
+                return;
+
+            // Defense in depth: only accept an actual backlight line.
+            for (const line of text.split("\n")) {
                 const fields = line.split(",");
                 if (fields.length < 4 || fields[1] !== "backlight")
                     continue;
@@ -74,6 +79,12 @@ Singleton {
                 root.available = true;
                 return;
             }
+
+            // Exit 0 with output but nothing recognized: brightnessctl's `-m`
+            // contract changed.
+            root.available = false;
+            BoundaryAlert.fail("brightnessctl", "Brightness OSD may be broken",
+                "brightnessctl -m output was not recognized; the OSD cannot read the backlight.");
         }
     }
 }
