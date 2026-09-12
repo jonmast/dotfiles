@@ -145,6 +145,13 @@
     variant = "";
   };
 
+  # Fonts. Latin Noto Sans, for GTK apps that honor the unmanaged
+  # ~/.config/gtk-3.0/settings.ini which asks for `gtk-font-name=Noto Sans, 10`
+  # (most visibly orca-slicer / wxGTK3, whose packed UI renders with
+  # mismatched metrics otherwise). Not in the session default set that
+  # `programs.hyprland.enable` pulls in.
+  fonts.packages = [ pkgs.noto-fonts ];
+
   # Printing
   services.printing.enable = true;
 
