@@ -183,9 +183,11 @@ let
   # Corpus builder, kept separate from the harness above: different job
   # (sourcing text vs measuring transcription) and a different dependency.
   #
-  # `opencode2` is deliberately NOT in runtimeInputs — it is installed outside
-  # nix by scripts/update-opencode2.sh, so it has to come from the caller's
-  # PATH, which writeShellApplication leaves intact.
+  # `opencode2` is deliberately NOT in runtimeInputs: it comes from the
+  # upstream opencode flake (see the `opencode` input in flake.nix), and this
+  # corpus builder only needs it on the caller's PATH — which
+  # writeShellApplication leaves intact — rather than pinned into the wrapper's
+  # closure.
   #
   # Writes a REVIEW file to stdout, never straight into the corpus: the prompts
   # it reads were typed, and some were themselves dictated and carry Voxtype's
@@ -283,6 +285,7 @@ in
   # rendered a tofu box where the mic and hourglass should be.
   home.packages = [
     package
+    pkgs.wtype
     pkgs.nerd-fonts.jetbrains-mono
     voxtype-eval
     voxtype-eval-corpus
@@ -443,6 +446,8 @@ in
       Environment = [
         "PATH=${lib.makeBinPath [
           package
+          pkgs.wtype
+          pkgs.which
           config.programs.quickshell.package
           config.wayland.windowManager.hyprland.package
           pkgs.bash
