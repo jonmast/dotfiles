@@ -7,7 +7,7 @@ This flake is the source of truth for all declarative nix-managed config on Diog
 | Output                           | Activation                                     | Purpose                                                                                                                                                                                                        |
 | -------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `nixosConfigurations."diogenes"` | `sudo nixos-rebuild switch --flake .#diogenes` | Full NixOS system. Includes home-manager via `home-manager.nixosModules`, so this command also activates home-manager atomically in the same generation. **This is the only activation command for diogenes.** |
-| `packages.x86_64-linux.*`        | `nix build .#<name>`                           | Local derivations (`ocmonitor`, `opencode2`, `lazyskills`), exposed for ad-hoc builds. The same derivations reach `home.packages` via the overlay in `flake.nix`.                                              |
+| `packages.x86_64-linux.*`        | `nix build .#<name>`                           | Packages reachable by attr name. `ocmonitor` and `lazyskills` are local derivations; `opencode2` is re-exported from the upstream `anomalyco/opencode` flake (input `opencode`, pinned to the latest `v2.0.x` tag). All reach `home.packages` via the overlay in `flake.nix`. |
 
 There is no standalone `homeConfigurations` output. home-manager runs only as a NixOS module; a standalone `home-manager switch` would write to the same generation profile and be silently reverted by the next rebuild. If a non-NixOS host is ever added it gets its own output — see "Adding a new machine".
 
@@ -15,8 +15,6 @@ There is no standalone `homeConfigurations` output. home-manager runs only as a 
 
 ```
 flake.nix                       # entrypoint: inputs + outputs + overlay for local packages
-scripts/
-└── update-opencode2.sh         # bump nix/packages/opencode2 to the newest npm release
 nix/
 ├── nixos/
 │   ├── diogenes.nix            # system: bootloader, kernel, luks, networking, users, display, sound, PAM, uwsm
@@ -34,8 +32,7 @@ nix/
 ├── packages/                   # locally-defined derivations, exposed via overlay in flake.nix
 │   ├── lazyskills/
 │   ├── nix-search/
-│   ├── ocmonitor/
-│   └── opencode2/
+│   └── ocmonitor/
 └── patches/
     ├── README.md
     └── fractal-hover-reactions.patch   # applied via fractalPatched in nix/home/common.nix
@@ -72,6 +69,9 @@ systemctl --user restart quickshell
 
 # Reload hyprland after nix/home/hypr/*.lua edits (no rebuild needed)
 hyprctl reload
+
+# Bump opencode2: change the v2 tag in flake.nix's `opencode` input, then
+nix flake update opencode
 
 # Check a hyprland config change without starting a session
 hyprland --verify-config -c ~/.config/hypr/hyprland.lua
