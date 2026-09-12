@@ -87,6 +87,49 @@
         default = self.packages.${system}.ocmonitor;
       };
 
+      # Validate the Hyprland Lua config against the `hl` API it uses, with no
+      # compositor required (hyprland --verify-config only needs a writable
+      # XDG_RUNTIME_DIR). Catches API drift on a Hyprland bump; external CLI
+      # contracts are runtime-only and handled by Common/BoundaryAlert.qml.
+      #
+      # core.lua/binds.lua come from the working tree because their deployed
+      # copies are out-of-store symlinks absent from the sandbox; paths.lua and
+      # voxtype.lua come from the evaluated config.
+      checks.${system}.hyprland-config =
+        let
+          hypr = self.nixosConfigurations.diogenes.config.home-manager.users.jon.wayland.windowManager.hyprland;
+        in
+        pkgs.runCommand "hyprland-config-check"
+          {
+            nativeBuildInputs = [ pkgs.hyprland ];
+          }
+          ''
+            export HOME="$TMPDIR/home"
+            export XDG_RUNTIME_DIR="$TMPDIR/runtime"
+            mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
+            chmod 700 "$XDG_RUNTIME_DIR"
+
+            cp ${./nix/home/hypr/core.lua} core.lua
+            cp ${./nix/home/hypr/binds.lua} binds.lua
+            cp ${pkgs.writeText "paths.lua" hypr.extraLuaFiles.paths.content} paths.lua
+            cp ${pkgs.writeText "voxtype.lua" hypr.extraLuaFiles.voxtype.content} voxtype.lua
+
+            cat > hyprland.lua <<'EOF'
+            package.path = "./?.lua;" .. package.path
+            require("binds")
+            require("core")
+            require("voxtype")
+            EOF
+
+            result=$(hyprland --verify-config -c ./hyprland.lua 2>&1) || true
+            printf '%s\n' "$result"
+            if ! printf '%s' "$result" | grep -q "config ok"; then
+              echo "hyprland --verify-config did not report 'config ok'" >&2
+              exit 1
+            fi
+            echo "hyprland config check passed" > "$out"
+          '';
+
       # NixOS system config (also activates home-manager for the jon user).
       #   sudo nixos-rebuild switch --flake .#diogenes
       #
