@@ -4,25 +4,19 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import qs.Common
 
-// waybar's `custom/dwt` — the disable-while-typing toggle (see CONTEXT.md:
-// "DWT"). Reproduces the old shell script's contract exactly: text "DWT on" /
-// "DWT off", nord14/nord11 foreground, click to flip, and the same tooltip
-// wording.
+// waybar's `custom/dwt`: the disable-while-typing toggle (CONTEXT.md: "DWT").
+// Text "DWT on"/"DWT off", nord14/nord11, click to flip.
 //
-// Why shell out to hyprctl instead of using the Hyprland module:
-// `Hyprland.dispatch()` only runs *dispatchers*, and reading or writing a
-// config option is `keyword`/`getoption`, not a dispatcher. Quickshell 0.3.1
-// exposes no option accessor, so hyprctl stays the interface — the same one
-// the `$mod T` bind in nix/home/hyprland.nix uses, which keeps the two paths
-// impossible to drift apart.
-//
-// Unlike the waybar script this parses the JSON in QML, so the widget no
-// longer needs jq on PATH. (jq stays installed: the `$mod T` bind still uses
-// it.)
+// hyprctl is the only option interface QML has (Quickshell 0.3.1 exposes no
+// Hyprland option accessor). Reads accept `bool` or `int` because hyprctl's
+// JSON shape has changed across versions; writes use `eval`, because `keyword`
+// is rejected under `configType = "lua"`.
 Item {
     id: root
 
     property bool dwtEnabled: false
+    // Set by an unrecognized read shape; cleared by the next good read.
+    property bool broken: false
 
     implicitWidth: pill.implicitWidth
     implicitHeight: pill.implicitHeight
@@ -37,16 +31,26 @@ Item {
         onExited: (code, status) => {
             if (code !== 0)
                 return;
+
+            // Malformed/empty reply means IPC is not up yet; not a failure.
+            let opt;
             try {
-                // hyprctl returns {"int": 0|1, "set": true} for this option —
-                // there is no `.bool` field. The old waybar script and the
-                // $mod T bind both used `jq -r .bool`, which silently yielded
-                // null/false and never toggled.
-                root.dwtEnabled = JSON.parse(readOut.text).int === 1;
+                opt = JSON.parse(readOut.text);
             } catch (e) {
-                // A malformed or empty reply means Hyprland's IPC is not up
-                // yet. Leave the last known value alone; the poll below will
-                // pick the real one up.
+                return;
+            }
+
+            // Well-formed object with neither shape is a changed contract.
+            if (typeof opt.bool === "boolean") {
+                root.dwtEnabled = opt.bool;
+                root.broken = false;
+            } else if (typeof opt.int === "number") {
+                root.dwtEnabled = opt.int === 1;
+                root.broken = false;
+            } else {
+                root.broken = true;
+                BoundaryAlert.fail("dwt-read", "DWT toggle may be broken",
+                    "hyprctl getoption returned an unrecognized value for input:touchpad:disable_while_typing.");
             }
         }
     }
@@ -54,14 +58,17 @@ Item {
     Process {
         id: writeState
 
-        // Refresh immediately rather than waiting up to a poll interval, so
-        // the click feels instant.
-        onExited: readState.running = true
+        // Refresh immediately so the click feels instant.
+        onExited: (code, status) => {
+            if (code !== 0)
+                BoundaryAlert.fail("dwt-write", "DWT toggle failed",
+                    "hyprctl eval was rejected; disable-while-typing was not changed.");
+            readState.running = true;
+        }
     }
 
-    // waybar polled this every 5s (`interval = 5`). Kept: hyprctl exposes no
-    // change event for config options, and the value also moves under us when
-    // the `$mod T` bind or a config reload fires.
+    // hyprctl has no change event, and the value also moves under us when the
+    // `$mod T` bind or a config reload fires.
     Timer {
         interval: 5000
         running: true
@@ -74,8 +81,8 @@ Item {
         id: pill
 
         Text {
-            text: root.dwtEnabled ? "DWT on" : "DWT off"
-            color: root.dwtEnabled ? Theme.nord14 : Theme.nord11
+            text: root.broken ? "DWT ?" : (root.dwtEnabled ? "DWT on" : "DWT off")
+            color: root.broken ? Theme.nord11 : (root.dwtEnabled ? Theme.nord14 : Theme.nord11)
             font.pixelSize: Theme.fontSize
             renderType: Text.NativeRendering
         }
@@ -87,7 +94,8 @@ Item {
 
     TapHandler {
         onTapped: {
-            writeState.command = ["hyprctl", "keyword", "input:touchpad:disable_while_typing", root.dwtEnabled ? "false" : "true"];
+            writeState.command = ["hyprctl", "eval",
+                "hl.config({input={touchpad={disable_while_typing=" + (root.dwtEnabled ? "false" : "true") + "}}})"];
             writeState.running = true;
         }
     }
@@ -97,7 +105,9 @@ Item {
         visible: hover.hovered
 
         Text {
-            text: root.dwtEnabled ? "Disable-while-typing ON (click to disable)" : "Disable-while-typing OFF (click to enable)"
+            text: root.broken
+                ? "Disable-while-typing state unknown (click to try toggling)"
+                : (root.dwtEnabled ? "Disable-while-typing ON (click to disable)" : "Disable-while-typing OFF (click to enable)")
             color: Theme.foreground
             font.pixelSize: Theme.tooltipFontSize
             renderType: Text.NativeRendering

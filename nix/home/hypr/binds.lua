@@ -85,19 +85,18 @@ end
 ---- HARDWARE ----
 ------------------
 
--- Toggle touchpad disable-while-typing. See the input block in config.lua for
--- why DWT is on by default and when you would want it off.
---
--- Kept as the original shell pipeline rather than the native
--- `hl.get_config`/`hl.config` pair, so the migration to Lua changed no
--- behaviour: `hyprctl keyword` is the same runtime override The Shell's DWT bar
--- widget uses, and hyprctl returns {"int": 0|1} for this option -- no `.bool`
--- field.
-hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(
-    [[hyprctl keyword input:touchpad:disable_while_typing ]] ..
-    [[$(if [ "$(hyprctl getoption input:touchpad:disable_while_typing -j | jq -r .int)" = '0' ]; ]] ..
-    [[then echo true; else echo false; fi)]]
-))
+-- Toggle touchpad disable-while-typing (core.lua: why DWT defaults on).
+-- Native hl.get_config/hl.config: `hyprctl keyword` is rejected under a Lua
+-- config, and get_config returns a bool directly.
+hl.bind(mainMod .. " + T", function()
+    hl.config({
+        input = {
+            touchpad = {
+                disable_while_typing = not hl.get_config("input:touchpad:disable_while_typing"),
+            },
+        },
+    })
+end)
 
 hl.bind("Print", hl.dsp.exec_cmd([[grim -g "$(slurp)" - | wl-copy]]))
 

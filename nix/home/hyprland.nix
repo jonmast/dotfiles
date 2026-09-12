@@ -25,7 +25,6 @@
     playerctl      # media key control
     brightnessctl  # brightness key control
     wireplumber    # provides wpctl for audio key control
-    jq             # JSON parsing for the $mod T DWT keybind below
     xdg-desktop-portal-hyprland
     xdg-desktop-portal-gtk
     # KDE portal + kwallet so apps that use libsecret (Chrome, mpv scripts,

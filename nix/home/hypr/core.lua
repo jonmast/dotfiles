@@ -101,10 +101,9 @@ hl.config({
         -- with the pad dead is miserable. That case is now the exception you
         -- reach for the toggle for, rather than the case the default serves.
         --
-        -- Toggle with $mainMod+T (see binds.lua) or The Shell's DWT bar
-        -- widget. Both go through `hyprctl keyword`, which is a RUNTIME
-        -- override -- this value comes back on every config reload, so a
-        -- home-manager switch always returns the pad to DWT-on.
+        -- Toggle with $mainMod+T or The Shell's DWT widget. Both are runtime
+        -- overrides: a config reload (and every home-manager switch) returns
+        -- the pad to DWT-on.
         touchpad = {
             natural_scroll       = true,
             disable_while_typing = true,
