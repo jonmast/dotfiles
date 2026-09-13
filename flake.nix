@@ -58,23 +58,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # OpenCode v2 (`opencode2`) — built from the upstream `v2.0.x` tag rather
-    # than the prebuilt npm tarball we used to fetchurl. The repo's
-    # nix/opencode.nix installs its binary as `opencode2` and sets
-    # mainProgram = "opencode2", so this is a drop-in for the old derivation.
-    # The default branch (dev) is v1 and builds a binary named `opencode`;
-    # only the v2 tags carry `opencode2`.
-    #
-    # Bump: change the tag in the URL below, then `nix flake update opencode`.
-    #
-    # `inputs.nixpkgs.follows` is deliberately NOT set: the node_modules tree
-    # is a fixed-output derivation whose hash is pinned in upstream's
-    # nix/hashes.json, computed against upstream's own pinned nixpkgs (and its
-    # bun). Following our nixpkgs risks a hash mismatch on a bun difference.
-    opencode.url = "github:anomalyco/opencode/v2.0.2";
   };
 
-  outputs = { self, nixpkgs, home-manager, nixpkgs-orca, nub, opencode, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, nixpkgs-orca, nub, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
@@ -82,7 +68,7 @@
     {
       packages.${system} = {
         ocmonitor = pkgs.callPackage ./nix/packages/ocmonitor { };
-        opencode2 = opencode.packages.${system}.default;
+        opencode2 = pkgs.callPackage ./nix/packages/opencode2 { };
         lazyskills = pkgs.callPackage ./nix/packages/lazyskills { };
         default = self.packages.${system}.ocmonitor;
       };
@@ -159,7 +145,7 @@
                   }).orca-slicer;
 
                 ocmonitor = final.callPackage ./nix/packages/ocmonitor { };
-                opencode2 = opencode.packages.${system}.default;
+                opencode2 = final.callPackage ./nix/packages/opencode2 { };
                 lazyskills = final.callPackage ./nix/packages/lazyskills { };
                 nix-search = final.callPackage ./nix/packages/nix-search { };
                 nub = nub.packages.${system}.default;
