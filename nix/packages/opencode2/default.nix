@@ -35,11 +35,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "opencode2";
-  version = "2.0.3";
+  version = "2.0.10";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-${finalAttrs.version}.tgz";
-    hash = "sha256-S4wsrWcpfHFa3/GKVpyICLIv4jxxl/0XdbwRy/oEAi0=";
+    hash = "sha256-yjyE14yRAFlg758/fWDH37Sy21i5ewcA5OOUoDvY9C8=";
   };
 
   nativeBuildInputs = [
@@ -49,12 +49,12 @@ stdenv.mkDerivation (finalAttrs: {
   ];
 
   # The tarball is a single ~200MB bun-compiled executable at package/bin/opencode.
-  # Upstream's installer renames it; we do too, because everything here
-  # (nix/home/common.nix, the voxtype scripts, ocmonitor) calls it `opencode2`.
+  # It lands in libexec because both `bin/` entries are wrappers around it (see
+  # postFixup) rather than the binary itself.
   installPhase = ''
     runHook preInstall
 
-    install -Dm755 bin/opencode $out/bin/opencode2
+    install -Dm755 bin/opencode $out/libexec/opencode
 
     runHook postInstall
   '';
@@ -83,25 +83,36 @@ stdenv.mkDerivation (finalAttrs: {
   # nix/opencode.nix invokes — that one has been parsed as a directory argument
   # for at least as long as v2 has existed, so the completions in the old
   # source build were a captured ENOENT error message, not a script. The
-  # scripts bind themselves to the name `opencode`, so rename them to the name
-  # we actually install; every identifier in them is consistently `_opencode*`.
+  # scripts bind themselves to the name `opencode`, so a sed'd copy provides the
+  # `opencode2` set; every identifier in them is consistently `_opencode*`.
+  #
+  # Both names are wrappers over the one binary in libexec, matching upstream's
+  # `@opencode/cli`, whose `bin` maps *both* `opencode` and `opencode2` at the
+  # same executable. `opencode2` is the name everything local
+  # (nix/home/common.nix, the voxtype scripts, ocmonitor) already calls.
   postFixup = ''
-    autoPatchelf $out/bin
+    autoPatchelf $out/libexec
 
-    wrapProgram $out/bin/opencode2 \
-      --prefix PATH : ${lib.makeBinPath [ ripgrep ]} \
-      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ wayland ]}
+    for name in opencode opencode2; do
+      makeWrapper $out/libexec/opencode $out/bin/$name \
+        --prefix PATH : ${lib.makeBinPath [ ripgrep ]} \
+        --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ wayland ]}
+    done
 
     export HOME=$(mktemp -d)
     export OPENCODE_DISABLE_MODELS_FETCH=1
     for shell in bash zsh fish; do
-      $out/bin/opencode2 --completions $shell \
-        | sed 's/opencode/opencode2/g' > completions.$shell
+      $out/bin/opencode --completions $shell > completions.$shell
+      sed 's/opencode/opencode2/g' completions.$shell > completions2.$shell
     done
-    installShellCompletion --cmd opencode2 \
+    installShellCompletion --cmd opencode \
       --bash completions.bash \
       --zsh completions.zsh \
       --fish completions.fish
+    installShellCompletion --cmd opencode2 \
+      --bash completions2.bash \
+      --zsh completions2.zsh \
+      --fish completions2.fish
   '';
 
   meta = {

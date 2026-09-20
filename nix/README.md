@@ -81,6 +81,8 @@ hyprland --verify-config -c ~/.config/hypr/hyprland.lua
 
 `opencode2` is `nix/packages/opencode2`: the prebuilt `@opencode/cli-linux-x64` npm tarball — the artifact upstream's own installer downloads — repackaged with `autoPatchelfHook` and a wrapper. It is deliberately **not** built from source. Upstream pins `bun@1.4.2` and hard-errors outside `^1.4.2`, but their `nix/opencode.nix` patches that check down to a warning because nixpkgs only ships bun 1.3.13; the resulting binary embeds a runtime upstream never tests, and its plugin loader misbehaves. The tarball avoids that entirely, and with it the stale `node_modules` hash and the `opencode`/`opencode2` rename hack the source build needed.
 
+The binary lives in `libexec`, and `bin/` holds two wrappers over it, `opencode` and `opencode2`, with completions for both names. That matches upstream's `@opencode/cli`, whose `bin` field maps both names at the same executable; `opencode2` remains the name the rest of this repo calls.
+
 The wrapper exists for one reason: `@opentui/core` **dlopen**s `libwayland-client.so.0` for its clipboard backend. Nothing links it, so `autoPatchelf` cannot see it; without `LD_LIBRARY_PATH` the Wayland backend silently fails and pasting into the TUI is broken. Note this bug also affects a `curl | bash` install of opencode, which has no wrapper to fix it.
 
 Bumping is two steps:
