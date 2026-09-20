@@ -6,8 +6,10 @@ import qs.Common
 //
 // Header row is the power switch — a Toggle rather than a button for the
 // reason the bluetooth panel gives: the thing has a state you want to read at
-// a glance. It reflects `GoogleTv.powered`, which the TV pushes to us, so it
-// moves on its own when the TV is switched from the physical remote.
+// a glance. It reflects `GoogleTv.tvPowered`, the TV SET's state, which the
+// bridge polls, so it moves on its own when the set is switched from the
+// physical remote. Deliberately not `GoogleTv.powered`: that is the streamer
+// box, which reads "on" even while the screen is dark.
 //
 // Under that, the remote proper: a d-pad, Back/Home, volume. Every button is
 // one `GoogleTv.key(...)`; the names are RemoteKeyCode entries from the
@@ -125,10 +127,13 @@ Column {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
 
-            checked: GoogleTv.isOn
+            checked: GoogleTv.tvIsOn
             busy: GoogleTv.status === "connecting" || GoogleTv.status === "reconnecting"
-            interactive: root.live
-            onToggled: GoogleTv.key("POWER")
+            // Powering ON goes to the TV set directly, so it must stay usable
+            // while the streamer is asleep and the bridge has no session —
+            // that is the one moment this control exists for.
+            interactive: root.live || GoogleTv.tvPowered !== null
+            onToggled: GoogleTv.power(GoogleTv.tvIsOn ? "off" : "on")
         }
     }
 
@@ -138,9 +143,11 @@ Column {
         width: parent.width
         spacing: Theme.panelSpacing
         visible: root.live
-        // A TV in standby still accepts keys (that is how POWER wakes it),
-        // but a d-pad for a dark screen is noise, so it dims rather than
-        // disappears.
+        // The streamer accepts keys whenever it is awake, but a d-pad for a
+        // dark screen is noise, so it dims rather than disappears. POWER is
+        // NOT among the keys that do anything useful here: it only puts the
+        // streamer to sleep and cannot wake it. Waking is the power toggle's
+        // job, and it takes an entirely different route — see GoogleTv.power.
         opacity: GoogleTv.isOn ? 1 : 0.5
 
         Grid {

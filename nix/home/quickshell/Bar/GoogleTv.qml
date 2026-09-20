@@ -35,9 +35,15 @@ Singleton {
     property string app: ""
     property var volume: null
     property string error: ""
+    // The TV set, which is a different device from the streamer everything
+    // else here describes — see the bridge's docstring. `powered` is true
+    // whenever the streamer is awake, including with the screen off, so it is
+    // the wrong thing to hang a power control on; this is the right one.
+    property var tvPowered: null
 
     readonly property bool connected: status === "connected"
     readonly property bool isOn: connected && powered === true
+    readonly property bool tvIsOn: tvPowered === true
 
     // Package → what a person calls it. The tail of the package name is the
     // fallback, which is wrong often enough ("tv", "ninja", "livingroom") that
@@ -89,7 +95,10 @@ Singleton {
         case "reconnecting":
             return "Reconnecting…";
         case "connected":
-            if (root.powered === false)
+            // The set being dark outranks whatever the streamer is playing:
+            // naming an app for a screen you cannot see is the confusion this
+            // whole widget used to create.
+            if (root.tvPowered === false || root.powered === false)
                 return "Standby";
             return root.appName ? root.appName : "On";
         }
@@ -104,6 +113,12 @@ Singleton {
 
     function key(code) {
         send("key " + code);
+    }
+
+    // "on" or "off". Not a key: the two directions take different routes to
+    // different devices, which is the bridge's problem, not ours.
+    function power(state) {
+        send("power " + state);
     }
 
     function setHost(addr) {
@@ -144,6 +159,7 @@ Singleton {
                 root.app = rec.app || "";
                 root.volume = rec.volume;
                 root.error = rec.error || "";
+                root.tvPowered = rec.tv_powered;
             }
         }
 
