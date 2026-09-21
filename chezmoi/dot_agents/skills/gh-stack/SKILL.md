@@ -27,39 +27,6 @@ Left is the **bottom**, right is the **top**. `auth` is based on `main` and merg
 Foundational work belongs at the bottom, code that depends on it above. For how to choose the
 layers, read `references/stack-design.md`.
 
-## Setup
-
-```bash
-gh extension install github/gh-stack
-git config rerere.enabled true         # remember conflict resolutions
-git config remote.pushDefault origin   # required if the repo has more than one remote
-```
-
-## Non-interactive use
-
-`gh stack` branches on whether **stdout is a TTY**. Piped, most commands error cleanly or print
-static text; under a PTY the same commands open a prompt or a full-screen TUI and block forever.
-Agent harnesses differ, so always pass the flags below instead of relying on that detection.
-
-**Multiple remotes:** never run `push`, `submit`, `sync`, `rebase`, or `link` without
-`--remote <name>` unless `remote.pushDefault` is configured. `checkout` and `trunk` have no
-`--remote` flag and require the config.
-
-| Always run | Never run bare | Why |
-|---|---|---|
-| `gh stack view --json` | `gh stack view` | opens a TUI under a PTY |
-| `gh stack submit --auto` | `gh stack submit` | prompts for a title per new PR |
-| `gh stack merge <target> --yes` | `gh pr merge` | `gh pr merge` cannot merge a stack |
-| `gh stack init <branch>...` | `gh stack init` | prompts for branch names |
-| `gh stack add <branch>` | `gh stack add` | prompts for a name, and fails even when piped |
-| `gh stack checkout <target>` | `gh stack checkout` | opens a selection menu |
-| `gh stack up` / `down` / `top` / `bottom` | `gh stack switch` | `switch` is menu-only |
-| — | `gh stack modify` | TUI-only, no non-interactive path |
-
-- `view --short` is safe in both modes, but it is formatted for humans. Use `--json` to parse.
-- **`checkout <pr>` when a different local stack already covers those branches** cannot be forced.
-  Run `gh stack unstack --local` first (this keeps the stack on GitHub), then retry.
-
 ## Branch placement
 
 - **Starting multi-part work:** create the stack before writing files. Do not implement every
@@ -101,24 +68,6 @@ gh stack sync --prune           # also delete local branches for merged PRs
 Pruning never happens without `--prune` when non-interactive. If the local and remote stacks have
 diverged, `sync` prints both chains, makes no changes, and exits 0 with `Sync aborted` — see
 `references/troubleshooting.md`.
-
-## Merging
-
-Scope the merge with an argument:
-
-```bash
-gh stack merge 42 --yes          # PR #42 plus every unmerged PR below it
-gh stack merge 7 --yes           # every unmerged PR in stack #7
-gh stack merge 42 --yes --squash # or --merge, --rebase, --merge-method <method>
-```
-
-Pass a PR number to merge that PR and every unmerged PR below it, or a stack number to merge every
-unmerged PR in that stack. The operation is all-or-nothing: if any PR in that set cannot merge,
-none do.
-
-Without a method flag the last-used method is reused. If the base branch uses a merge queue, the
-stack is queued instead and the queue picks the method, ignoring any flag you passed with a
-warning; queued PRs may land in separate groups.
 
 ## Reading state
 
