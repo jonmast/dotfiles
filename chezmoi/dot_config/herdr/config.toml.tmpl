@@ -26,9 +26,25 @@ next_workspace = "prefix+down"
 
 [[keys.command]]
 key = "prefix+a"
-type = "shell"
-command = "herdr-pi-assist"
-description = "AI Assist tab toggle"
+type = "popup"
+command = 'tmux -L herdr -f $HOME/.config/herdr/pi-tmux.conf new-session -A -D -s pi-assist -c "$HOME" "PATH=$HOME/.local/share/mise/installs/node/lts-jod/bin:$PATH pi --session-id herdr-assist --append-system-prompt $HOME/.config/herdr/pi-assist-prompt.md"'
+description = "pi assist popup"
+width = "80%"
+height = "80%"
+
+[[keys.command]]
+key = "prefix+o"
+type = "plugin_action"
+command = "herdr-zoxide.browse"
+description = "Browse zoxide directories"
+
+[[keys.command]]
+key = "cmd+r"
+type = "popup"
+command = "~/.config/herdr/scripts/herdr-review-branch.sh"
+description = "Review a recent branch (stack-aware)"
+width = "70%"
+height = "60%"
 
 [terminal]
 {{- if eq .chezmoi.os "darwin" }}
