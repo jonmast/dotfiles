@@ -79,3 +79,5 @@ alias gop='gh pr create -w'
 
 alias tree='eza -T'
 (( $+aliases[sd] )) && unalias sd
+
+alias f="herdr plugin action invoke open-file-viewer --plugin herdr-file-viewer"

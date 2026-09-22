@@ -129,7 +129,12 @@ bindkey -M vicmd 'j' history-substring-search-down
 if type starship &> /dev/null; then
   eval "$(starship init zsh)"
 fi
-[[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
+if type atuin &> /dev/null; then
+  eval "$(atuin init zsh)"
+  # atuin binds k/j in vi command mode to its search UI; restore vi history nav
+  bindkey -M vicmd 'k' up-line-or-beginning-search
+  bindkey -M vicmd 'j' down-line-or-beginning-search
+fi
 ghcs() {
 	FUNCNAME="$funcstack[1]"
 	TARGET="shell"
@@ -286,6 +291,9 @@ export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true
 
 # Vite+ bin (https://viteplus.dev)
 [[ -f "$HOME/.vite-plus/env" ]] && . "$HOME/.vite-plus/env"
+
+# opencode
+export PATH="$HOME/.opencode/bin:$PATH"
 
 # Machine-local overrides (untracked, per-host)
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

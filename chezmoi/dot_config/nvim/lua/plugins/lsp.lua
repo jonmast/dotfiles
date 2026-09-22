@@ -127,7 +127,7 @@ return {
         'prismals',
         'nixd',
         'rust_analyzer',
-        'tsgo',
+        'typescript',
         'vimls',
         'yamlls',
       })
