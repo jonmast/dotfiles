@@ -32,11 +32,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Hermes Agent (Nous Research). Official flake: provides the `hermes`
-    # CLI, the Hermes Desktop Electron app, and a home-manager module
-    # (programs.hermes-agent / services.hermes-agent).
-    hermes-agent.url = "github:NousResearch/hermes-agent";
-
     # Nub — all-in-one Node.js toolkit (TypeScript runner, pnpm-compatible
     # package manager, Node version manager). Not yet in nixpkgs (PR #535802).
     nub = {
@@ -55,6 +50,11 @@
     # dynamically via the parakeet-load-dynamic feature rather than vendored.
     voxtype = {
       url = "github:peteonrails/voxtype/v1.0.1";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
