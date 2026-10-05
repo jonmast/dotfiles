@@ -302,7 +302,17 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
+  # bitwarden-desktop is system-level, not in home.packages, for ONE reason:
+  # its biometric unlock is a polkit check (`com.bitwarden.Bitwarden.unlock`,
+  # `auth_self`), and polkitd only scans /etc/polkit-1/actions,
+  # /run/polkit-1/actions, /usr/(local/)share/polkit-1/actions and
+  # /run/current-system/sw/share/polkit-1/actions. `~/.nix-profile` is not on
+  # that list, so a home-manager install registers the action nowhere and the
+  # extension's unlock fails with "biometrics not available".
+  # The finger itself comes from `security.pam.services.polkit-1.fprintAuth`
+  # above; the polkit prompt is The Shell's QML agent (Polkit/PolkitAgent.qml).
   environment.systemPackages = [
+    pkgs.bitwarden-desktop
   ];
 
   programs.nix-ld.enable = true;

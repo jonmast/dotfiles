@@ -10,7 +10,6 @@ in
     atool
     anki
     bat
-    # bitwarden-desktop
     bun
     cargo
     chezmoi
@@ -102,9 +101,26 @@ in
 
   programs.firefox = {
     enable = true;
-    # nativeMessagingHosts = [ pkgs.bitwarden-desktop ];
     configPath = ".mozilla/firefox";
   };
+
+  # NOTE on Bitwarden browser integration: do NOT manage
+  # `~/.mozilla/native-messaging-hosts/com.8bit.bitwarden.json` from here, and
+  # do not set `programs.firefox.nativeMessagingHosts = [ pkgs.bitwarden-desktop ]`
+  # (a no-op anyway — the package ships no `lib/mozilla/native-messaging-hosts`,
+  # only `libexec/desktop_proxy` and the polkit policy).
+  #
+  # Since 2026.8.0 the desktop app writes that manifest itself on every launch
+  # and there is no longer a toggle for it (migration 82,
+  # `RemoveBrowserIntegrationEnabled`). A home.file symlink into the store makes
+  # it fail with `EROFS: read-only file system` and the bridge never comes up.
+  # The old reason to pin it here — the app baking a store path that later gets
+  # GC'd — is fixed upstream: it now copies desktop_proxy to
+  # `~/.mozilla/native-messaging-hosts/.bitwarden_desktop_proxy` and points the
+  # manifest at that writable copy, refreshed each start.
+  #
+  # The part that DOES need declaring is `pkgs.bitwarden-desktop` in
+  # environment.systemPackages (nix/nixos/diogenes.nix), for the polkit action.
 
   programs.gpg.enable = true;
 
