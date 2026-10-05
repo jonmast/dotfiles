@@ -82,7 +82,7 @@ let
       # rather than the pinned-recipe alternatives (`w4a8`, `int8-lite`), so
       # improvements arrive on the next re-pin.
       encoder = get "int8/encoder-model.int8.onnx"
-        "sha256-UMHpuFiMVVDe8b+k7P4fP7PSjgbZrDrlUScb+lkyAh0=";
+        "sha256-AZ95ikK+Xu4CnYWREWMI346K3x9VpiksFfG9VYPwSvQ=";
 
       # fp32 decoder, not the int8 one beside the encoder: no decoder ships at
       # the MatMulNBits widths, and this is the pairing upstream benchmarks.
@@ -90,7 +90,7 @@ let
       # against full fp32 for +29MB resident, and fixed "sub agent"/"subagent".
       # Graph and weights are separate files that must land in one directory.
       decoder = get "fp32/decoder_joint-model.onnx"
-        "sha256-D1HOFebHGVAeHobz/1Inwvev8FcJuGCnNXJ8FUfbxQY=";
+        "sha256-f6BcUYPfyJ27DzTUsueTX4d3YvJDi7zHlyn04tAOsEE=";
       decoderData = get "fp32/decoder_joint-model.onnx.data"
         "sha256-ZGWxpbMptR8kPeWFAoq+M36NOhlMCZLA3mxq7MFFb+8=";
 
