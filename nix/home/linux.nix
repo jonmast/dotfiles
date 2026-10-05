@@ -17,7 +17,21 @@
       repository      = "sftp:root@192.168.1.155:/mnt/spinners/diogenes-backup";
       passwordFile    = "/etc/nixos/secrets/restic-password";
       paths           = [ "/home/jon" "/etc/nixos/configuration.nix" ];
-      exclude         = [ "/home/jon/.cache" ".cache" ".local/share/Trash" ];
+      exclude         = [
+        "/home/jon/.cache" ".cache" ".local/share/Trash"
+        # Rootless podman storage is owned by subuids and unreadable to restic.
+        # Image layers are re-pullable; volumes are exported below instead.
+        "/home/jon/.local/share/containers/storage"
+      ];
+      backupPrepareCommand = ''
+        export PATH=/run/wrappers/bin:/run/current-system/sw/bin:$PATH
+        out="$HOME/.local/share/podman-volume-exports"
+        rm -rf "$out"
+        mkdir -p "$out"
+        for v in $(podman volume ls -q); do
+          podman volume export -o "$out/$v.tar" "$v" || echo "failed to export volume $v" >&2
+        done
+      '';
       timerConfig     = { OnCalendar = "daily"; Persistent = true; };
       pruneOpts       = [
         "--keep-daily 7"
@@ -32,7 +46,9 @@
       ];
     };
   };
-  systemd.user.services."restic-backups-homebackup".Unit = {
-    ConditionACPower = true;
+  systemd.user.services."restic-backups-homebackup" = {
+    Unit.ConditionACPower = true;
+    # Exit 3 = snapshot saved but some files were unreadable; keep going to prune/check.
+    Service.SuccessExitStatus = 3;
   };
 }
