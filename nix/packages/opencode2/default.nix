@@ -27,7 +27,8 @@
 # commit the matching git tag points at.
 #
 # Bump:
-#   1. curl -fsSL https://opencode.ai/update/api/beta/cli/npm   # current version
+#   1. curl -fsSL https://registry.npmjs.org/@opencode/cli-linux-x64 | jq '."dist-tags".latest'
+#      (the opencode.ai/update/api/beta/cli/npm endpoint has gone stale)
 #   2. edit `version` below
 #   3. nix store prefetch-file --json \
 #        https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-<version>.tgz
@@ -35,11 +36,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "opencode2";
-  version = "2.0.10";
+  version = "2.0.22";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-${finalAttrs.version}.tgz";
-    hash = "sha256-yjyE14yRAFlg758/fWDH37Sy21i5ewcA5OOUoDvY9C8=";
+    hash = "sha256-ZUNMviVvI985eklBA55e7iixo3wbrVN2pSF/WDo1NYM=";
   };
 
   nativeBuildInputs = [
