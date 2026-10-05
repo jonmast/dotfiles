@@ -5,7 +5,7 @@ import qs.Common
 // The Google TV pill: "TV", coloured by what the bridge knows.
 //
 //   nord14   connected and the TV set is on
-//   fg       connected, set in standby (or streamer awake behind a dark set)
+//   fg       set in standby, or connected with the set's state unknown
 //   nord13   pairing / connecting / reconnecting — something is in flight
 //   nord3    nothing to talk to (unconfigured, unpaired, unreachable, down)
 //
@@ -23,7 +23,9 @@ Item {
         // The set, not the streamer: green should mean "there is a picture".
         if (GoogleTv.isOn && GoogleTv.tvPowered !== false)
             return Theme.nord14;
-        if (GoogleTv.connected)
+        // Ahead of the in-flight colours: standby IS a reconnect loop, and
+        // left to nord13 an off TV would sit there looking like a problem.
+        if (GoogleTv.connected || GoogleTv.standby)
             return Theme.foreground;
         switch (GoogleTv.status) {
         case "connecting":

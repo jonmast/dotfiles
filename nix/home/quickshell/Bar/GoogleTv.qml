@@ -33,6 +33,11 @@ Singleton {
     // have not reached yet.
     property var powered: null
     property string app: ""
+    // Packages the bridge has seen in front, most recent first. Learned, not
+    // configured: the protocol will not say what is installed, so this is the
+    // only list that can be both accurate and unattended. Empty on a fresh
+    // state dir and fills in as the TV gets used.
+    property var apps: []
     property var volume: null
     property string error: ""
     // The TV set, which is a different device from the streamer everything
@@ -45,9 +50,18 @@ Singleton {
     readonly property bool isOn: connected && powered === true
     readonly property bool tvIsOn: tvPowered === true
 
-    // Package → what a person calls it. The tail of the package name is the
-    // fallback, which is wrong often enough ("tv", "ninja", "livingroom") that
-    // the common ones are spelled out.
+    // A dark set explains a dead link, and is not a fault worth reporting.
+    // The streamer sleeps when the set does and takes the TLS session with
+    // it, so an off TV rests at `reconnecting` — or `unreachable`, if the
+    // bridge started after the TV went off. Strictly false, never merely
+    // unknown: a set we have not reached says nothing about the link.
+    readonly property bool standby: tvPowered === false && (connected || status === "reconnecting" || status === "unreachable")
+
+    // Package → what a person calls it. Purely cosmetic, and membership gates
+    // nothing: an unlisted package falls back to its last dotted segment, so
+    // a newly installed app shows up named, just less gracefully. The entries
+    // here are the ones where that fallback embarrasses itself ("ninja",
+    // "livingroom", "launcherx").
     readonly property var appNames: ({
         "com.google.android.apps.tv.launcherx": "Home",
         "com.google.android.tvlauncher": "Home",
@@ -68,17 +82,23 @@ Singleton {
         "com.android.tv.settings": "Settings"
     })
 
-    readonly property string appName: {
-        if (!root.app)
+    function label(pkg) {
+        if (!pkg)
             return "";
-        if (root.appNames[root.app])
-            return root.appNames[root.app];
-        const parts = root.app.split(".");
+        if (root.appNames[pkg])
+            return root.appNames[pkg];
+        const parts = pkg.split(".");
         return parts[parts.length - 1];
     }
 
+    readonly property string appName: root.label(root.app)
+
     // One line for a tooltip or a panel header.
     readonly property string summary: {
+        // Outranks the whole status vocabulary: the link's business is not
+        // worth narrating for a TV that is off.
+        if (root.standby)
+            return "Standby";
         switch (root.status) {
         case "down":
             return "Bridge not running";
@@ -95,10 +115,9 @@ Singleton {
         case "reconnecting":
             return "Reconnecting…";
         case "connected":
-            // The set being dark outranks whatever the streamer is playing:
-            // naming an app for a screen you cannot see is the confusion this
+            // Naming an app for a screen you cannot see is the confusion this
             // whole widget used to create.
-            if (root.tvPowered === false || root.powered === false)
+            if (root.powered === false)
                 return "Standby";
             return root.appName ? root.appName : "On";
         }
@@ -113,6 +132,10 @@ Singleton {
 
     function key(code) {
         send("key " + code);
+    }
+
+    function launch(pkg) {
+        send("launch " + pkg);
     }
 
     // "on" or "off". Not a key: the two directions take different routes to
@@ -157,6 +180,7 @@ Singleton {
                 root.host = rec.host || "";
                 root.powered = rec.powered;
                 root.app = rec.app || "";
+                root.apps = rec.apps || [];
                 root.volume = rec.volume;
                 root.error = rec.error || "";
                 root.tvPowered = rec.tv_powered;

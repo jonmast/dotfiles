@@ -15,6 +15,7 @@ in the bar between clicks.
 Wire format, both directions line-oriented:
 
   stdin   key <CODE>       send a key (RemoteKeyCode name, e.g. HOME, DPAD_UP)
+          launch <PKG>     bring an app to the front (see "the app list" below)
           power on|off     turn the TV set on or off (see "two devices" below)
           pair             start pairing; the TV shows a six-digit code
           pin <CODE>       finish pairing with that code
@@ -23,7 +24,8 @@ Wire format, both directions line-oriented:
 
   stdout  one JSON object per line, the full state, on every change:
           {"status": ..., "host": ..., "powered": true|false|null,
-           "app": "<package>"|null, "volume": {...}|null, "error": "...",
+           "app": "<package>"|null, "apps": ["<package>", ...],
+           "volume": {...}|null, "error": "...",
            "tv_powered": true|false|null}
 
 `status` is one of:
@@ -48,9 +50,22 @@ is the set, and it is asymmetric:
         standby it is a no-op. Launching the input wakes the set AND brings
         the streamer back via CEC, so one request restores both.
 
+The streamer also sleeps with the set, which is why `reconnecting` (or
+`unreachable`, if we started after the TV went off) is the RESTING state of
+an off TV rather than a fault. Only `tv_powered` separates the two, and a
+consumer that shows status without it will cry wolf every evening.
+
 `powered` is the streamer's own state and is NOT the set's — it reads true
 whenever the box is awake, including with the screen off. `tv_powered` is
 the set, polled from ECP, and is what a power control should show.
+
+The app list, `apps`, is learned rather than configured. The protocol can say
+which app is in front but has no way to ask what is installed, and Roku's
+`query/apps` is the wrong device — it knows the set's apps, not the
+streamer's. So every package seen in front gets remembered, most recent
+first, and `launch` can put any of them back. An app you have never opened is
+not offered, which is the point: launching a package that is not installed
+lands the TV in the Play Store.
 
 Config is ~/.config/googletv/config.json:
 
@@ -60,9 +75,9 @@ Config is ~/.config/googletv/config.json:
 because Roku rejects a hostname in the Host header (403) as rebinding
 protection — see roku_url(). Omit `tv_host` and `power` is unavailable.
 
-The client certificate the TV pairs against lives in ~/.local/state/googletv/.
-Both paths honour XDG overrides. Delete the state dir to force a fresh
-pairing.
+The client certificate the TV pairs against lives in ~/.local/state/googletv/,
+alongside the learned app list. Both paths honour XDG overrides. Delete the
+state dir to force a fresh pairing.
 
 Debugging story: run this in a terminal and type the commands above.
 """
@@ -74,6 +89,7 @@ import os
 import re
 import socket
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -92,6 +108,21 @@ CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) /
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "googletv"
 CERT_FILE = STATE_DIR / "cert.pem"
 KEY_FILE = STATE_DIR / "key.pem"
+APPS_FILE = STATE_DIR / "apps.json"
+
+# How many learned apps to offer. The list is a shortcut, not an inventory:
+# past a dozen it is faster to walk the TV's own launcher.
+APP_LIMIT = 12
+# Home screens are not destinations. They would top the list permanently —
+# every app you close returns here, so this is the most recently seen package
+# almost always — and the HOME key already goes there in one press.
+LAUNCHERS = frozenset(
+    {
+        "com.google.android.apps.tv.launcherx",
+        "com.google.android.tvlauncher",
+        "com.google.android.tvrecommendations",
+    }
+)
 
 RETRY_MIN = 2
 RETRY_MAX = 60
@@ -120,11 +151,17 @@ class Bridge:
         self.app: str | None = None
         self.volume: dict | None = None
         self.error = ""
+        # package → epoch seconds last seen in front.
+        self.seen: dict[str, float] = {}
         self.remote: AndroidTVRemote | None = None
         self.connect_task: asyncio.Task | None = None
         self.retry_wakeup = asyncio.Event()
 
     # ---- state --------------------------------------------------------
+
+    @property
+    def apps(self) -> list[str]:
+        return sorted(self.seen, key=self.seen.__getitem__, reverse=True)[:APP_LIMIT]
 
     def emit(self) -> None:
         print(
@@ -134,6 +171,7 @@ class Bridge:
                     "host": self.host or "",
                     "powered": self.powered,
                     "app": self.app,
+                    "apps": self.apps,
                     "volume": self.volume,
                     "error": self.error,
                     "tv_powered": self.tv_powered,
@@ -165,19 +203,50 @@ class Bridge:
         config = {"host": self.host, "tv_host": self.tv_host, "tv_input": self.tv_input}
         CONFIG_FILE.write_text(json.dumps(config, indent=2) + "\n")
 
+    def load_apps(self) -> None:
+        try:
+            seen = json.loads(APPS_FILE.read_text())
+        except (OSError, ValueError):
+            return
+        if isinstance(seen, dict):
+            self.seen = {k: v for k, v in seen.items() if isinstance(v, (int, float))}
+
+    def learn(self, app: str | None) -> None:
+        """Remember an app we have seen in front, so `launch` can offer it."""
+        if not app or app in LAUNCHERS:
+            return
+        self.seen[app] = time.time()
+        # Writing on every switch is fine: this fires when a person picks an
+        # app, not on a timer.
+        try:
+            STATE_DIR.mkdir(parents=True, exist_ok=True)
+            APPS_FILE.write_text(json.dumps(self.seen, indent=2) + "\n")
+        except OSError:
+            # A list that forgets is worth more than a bridge that dies over
+            # a read-only state dir.
+            logging.exception("could not save the app list")
+
+    def note_app(self, app: str | None) -> None:
+        self.learn(app)
+        self.set(app=app)
+
     # ---- connection ---------------------------------------------------
 
     def build_remote(self) -> AndroidTVRemote:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         remote = AndroidTVRemote(CLIENT_NAME, str(CERT_FILE), str(KEY_FILE), self.host)
         remote.add_is_on_updated_callback(lambda on: self.set(powered=on))
-        remote.add_current_app_updated_callback(lambda app: self.set(app=app))
+        remote.add_current_app_updated_callback(self.note_app)
         remote.add_volume_info_updated_callback(lambda v: self.set(volume=dict(v)))
         remote.add_is_available_updated_callback(self.on_available)
         return remote
 
     def on_available(self, available: bool) -> None:
         if available:
+            # The app in front at reconnect counts as seen: the callback only
+            # fires on a CHANGE, so an app left running across a dropped
+            # session would otherwise never make it into the list.
+            self.learn(self.remote.current_app)
             self.set(status="connected", error="", powered=self.remote.is_on, app=self.remote.current_app)
         else:
             self.set(status="reconnecting", powered=None, app=None)
@@ -226,6 +295,7 @@ class Bridge:
                 delay = min(delay * 2, RETRY_MAX)
                 continue
             self.remote.keep_reconnecting(self.on_invalid_auth)
+            self.learn(self.remote.current_app)
             self.set(status="connected", error="", powered=self.remote.is_on, app=self.remote.current_app)
             return
 
@@ -263,6 +333,11 @@ class Bridge:
                     powered = match.group(1) == "PowerOn" if match else None
                 if powered != self.tv_powered:
                     self.set(tv_powered=powered)
+                    # The streamer wakes with the set, so this is the moment
+                    # a retry can start working; the backoff by then is a
+                    # minute of watching a TV that is already on.
+                    if powered and self.status == "unreachable":
+                        self.retry_wakeup.set()
             await asyncio.sleep(TV_POLL)
 
     # ---- commands -----------------------------------------------------
@@ -328,6 +403,23 @@ class Bridge:
             if self.error:
                 self.set(error="")
 
+    async def cmd_launch(self, app: str) -> None:
+        if not self.remote or self.status != "connected":
+            self.set(error="not connected")
+            return
+        if not app:
+            self.set(error="launch needs a package")
+            return
+        try:
+            self.remote.send_launch_app_command(app)
+        except ConnectionClosed:
+            self.set(error="connection dropped")
+            return
+        # The TV reports the switch itself a moment later, via the app
+        # callback; nothing to record here.
+        if self.error:
+            self.set(error="")
+
     async def cmd_power(self, arg: str) -> None:
         if arg not in ("on", "off"):
             self.set(error="power takes on or off")
@@ -360,6 +452,8 @@ class Bridge:
         match verb:
             case "key":
                 await self.cmd_key(arg)
+            case "launch":
+                await self.cmd_launch(arg)
             case "power":
                 await self.cmd_power(arg)
             case "pair":
@@ -379,6 +473,7 @@ class Bridge:
 
     async def run(self) -> None:
         self.load_config()
+        self.load_apps()
         self.emit()
         self.start_connect()
         poll = asyncio.create_task(self.tv_poll_loop())

@@ -1,3 +1,9 @@
+// The app list is a Repeater, and its delegate reaches back out to this
+// file's `root` to close itself after a launch. Without this, that reach is
+// an unbound context lookup — it happens to work, and qmllint rightly flags
+// it as the kind of thing that stops working quietly.
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
 import qs.Common
@@ -27,9 +33,18 @@ Column {
     spacing: Theme.panelSpacing
 
     readonly property bool live: GoogleTv.connected
-    readonly property bool needsHost: GoogleTv.status === "unconfigured" || GoogleTv.status === "unreachable"
+    // `unreachable` in standby is a sleeping streamer, not a wrong address:
+    // asking for one would be blaming the user for turning the TV off.
+    readonly property bool needsHost: GoogleTv.status === "unconfigured" || (GoogleTv.status === "unreachable" && !GoogleTv.standby)
     readonly property bool needsPair: GoogleTv.status === "unpaired"
     readonly property bool needsPin: GoogleTv.status === "pairing"
+
+    // The header's app name doubles as the switcher's handle — the place you
+    // already look to see what is on is the place to reach to change it. It
+    // is only a handle when there is somewhere to go: the list is learned, so
+    // a TV that has only ever shown its home screen has nothing to offer.
+    readonly property bool canSwitch: root.live && GoogleTv.apps.length > 0
+    property bool appsOpen: false
 
     // Square keys for the d-pad so the grid is a grid; the rest take the
     // width their label needs, like every other Button in the shell.
@@ -49,7 +64,10 @@ Column {
     // The header is in the list because it is visible in every state, remote
     // or not, and its summary text ("unreachable — retrying") is the longest
     // string the panel ever shows.
-    readonly property int contentWidth: Math.max(padGrid.implicitWidth, navRow.implicitWidth, volumeRow.implicitWidth, headerText.implicitWidth + powerToggle.implicitWidth + Theme.panelSpacing)
+    // The app grid counts only while it is open. A hidden Grid still reports
+    // the width of its children, so measuring it unconditionally would leave
+    // the card padded out for a list nobody is looking at.
+    readonly property int contentWidth: Math.max(padGrid.implicitWidth, navRow.implicitWidth, volumeRow.implicitWidth, root.appsOpen ? appsGrid.implicitWidth : 0, headerText.implicitWidth + powerToggle.implicitWidth + Theme.panelSpacing)
 
     // The keyboard drives the d-pad, because reaching for the mouse to press
     // ▼ four times is the whole reason a physical remote is annoying. Popout
@@ -61,8 +79,13 @@ Column {
     // once setup is done the d-pad would be dead until the panel was
     // reopened. Taking focus here revives it: this handler then fires
     // directly rather than by forwarding.
-    onLiveChanged: if (root.live && !root.needsPin)
-        root.forceActiveFocus()
+    onLiveChanged: {
+        if (root.live && !root.needsPin)
+            root.forceActiveFocus();
+        // A list of apps you cannot launch is a menu of disappointments.
+        if (!root.live)
+            root.appsOpen = false;
+    }
     Keys.onPressed: event => {
         if (!root.live || !GoogleTv.isOn)
             return;
@@ -113,12 +136,19 @@ Column {
             }
 
             Text {
-                text: GoogleTv.summary
+                text: root.canSwitch ? GoogleTv.summary + (root.appsOpen ? "  ▴" : "  ▾") : GoogleTv.summary
                 color: Theme.panelForeground
                 opacity: Theme.panelMetaOpacity
                 font.pixelSize: Theme.panelSectionFontSize
                 renderType: Text.NativeRendering
             }
+        }
+
+        MouseArea {
+            anchors.fill: headerText
+            enabled: root.canSwitch
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.appsOpen = !root.appsOpen
         }
 
         Toggle {
@@ -128,12 +158,47 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
 
             checked: GoogleTv.tvIsOn
-            busy: GoogleTv.status === "connecting" || GoogleTv.status === "reconnecting"
+            // Never busy in standby: a spinner reads as "wait", and the
+            // switch is the one control that works right now.
+            busy: !GoogleTv.standby && (GoogleTv.status === "connecting" || GoogleTv.status === "reconnecting")
             // Powering ON goes to the TV set directly, so it must stay usable
             // while the streamer is asleep and the bridge has no session —
             // that is the one moment this control exists for.
             interactive: root.live || GoogleTv.tvPowered !== null
             onToggled: GoogleTv.power(GoogleTv.tvIsOn ? "off" : "on")
+        }
+    }
+
+    // ---- apps ------------------------------------------------------------
+
+    // Two columns because a dozen stacked buttons make a panel you scroll
+    // past to reach the d-pad. The buttons size to their labels rather than
+    // to the panel: contentWidth is measured off this grid, so a child that
+    // wanted `parent.width` would be asking the panel how wide the panel is.
+    Grid {
+        id: appsGrid
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        columns: 2
+        spacing: Theme.panelRowSpacing * 2
+        visible: root.canSwitch && root.appsOpen
+
+        Repeater {
+            model: GoogleTv.apps
+
+            Button {
+                required property var modelData
+
+                text: GoogleTv.label(modelData)
+                // The app already in front, marked rather than disabled:
+                // relaunching is how you get back to a show you have paused
+                // your way out of.
+                primary: modelData === GoogleTv.app
+                onActivated: {
+                    GoogleTv.launch(modelData);
+                    root.appsOpen = false;
+                }
+            }
         }
     }
 
