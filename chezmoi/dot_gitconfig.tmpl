@@ -1,6 +1,7 @@
 [user]
 	email = jon@jonmast.com
 	name = Jonathan Mast
+	signingkey = {{ .chezmoi.homeDir }}/.ssh/id_ed25519.pub
 [push]
 	default = simple
 [core]
@@ -35,7 +36,7 @@
 	process = git-lfs filter-process
 	required = true
 [commit]
-	gpgsign = false
+	gpgsign = true
 
 [include]
 	path = ~/.gitconfig.local
@@ -54,5 +55,7 @@
 	enabled = true
 [gpg]
 	format = ssh
-[maintenance]
-	repo = /Users/jon/projects/vtex/ethel
+[tag]
+	gpgsign = true
+[gpg "ssh"]
+	allowedSignersFile = {{ .chezmoi.homeDir }}/.config/git/allowed_signers

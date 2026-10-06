@@ -1,7 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "share": "disabled",
-  "small_model": "opencode-go/deepseek-v4-flash",
+  // "small_model": "opencode-go/deepseek-v4-flash",
+  "small_model": "opencode-go/mimo-v2.5",
+  "subagent_depth": 3,
   "mcp": {
     "mikes-minion": {
       "enabled": false,
@@ -27,6 +29,9 @@
     }
   },
   "permission": {
+    "external_directory": {
+      "/tmp/*": "allow",
+    },
     "bash": {
       "gt modify *": "ask",
       "git push *": "ask",
@@ -51,7 +56,7 @@
   },
   "references": {
     "ethel": {
-      "path": "/Users/jon/projects/vtex/ethel"
+      "path": "{{ .chezmoi.homeDir }}/projects/vtex/ethel"
     }
   },
   "agent": {
@@ -69,31 +74,41 @@
       }
     },
     "explore": {
-      "model": "opencode-go/deepseek-v4-flash",
+      // "model": "opencode-go/deepseek-v4-flash",
+      "model": "anthropic/claude-fable-5",
       "variant": "low"
+    },
+    "reviewer": {
+      "description": "Reviews code for best practices and potential issues",
+      "mode": "subagent",
+      "model": "opencode-go/mimo-v2.5",
+      "prompt": "You are a code and architecture reviewer. Evaluate the code or plan for robustness, architectural quality, and project standards",
+      "permission": {
+        "*": "deny",
+        "read": "allow",
+      }
     }
   },
   "plugin": [
-    [
-      "file:///Users/jon/up-to-no-good/superpowers",
-      {
-        "directoryPrefix": "~/projects"
-      }
-    ],
-    "@cortexkit/aft-opencode@0.49.0",
-    "@cortexkit/opencode-magic-context@0.33.0",
+    "file://{{ .chezmoi.homeDir }}/up-to-no-good/superpowers",
+    "@cortexkit/aft-opencode@latest",
+    // "@cortexkit/opencode-magic-context@0.36.0",
     "@cortexkit/opencode-anthropic-auth@1.18.0",
     [
-      "file:///Users/jon/up-to-no-good/replicants",
+      "file://{{ .chezmoi.homeDir }}/up-to-no-good/replicants",
       {
         "preset": "standard",
         "presets": {
           "standard": {
             "light": {
-              "model": "opencode-go/deepseek-v4-flash"
+              // "model": "opencode-go/deepseek-v4-flash"
+              "model": "opencode-go/mimo-v2.5",
             },
             "standard": {
-              "model": "opencode-go/minimax-m3",
+              // "model": "opencode-go/deepseek-v4-flash",
+              // "variant": "max",
+              "model": "opencode-go/hy3",
+              // "model": "anthropic/claude-sonnet-5"
             },
             "heavy": {
               "model": "anthropic/claude-fable-5"
@@ -106,7 +121,7 @@
     ]
   ],
   "instructions": [
-    "/Users/jon/.config/opencode/rules/*.md"
+    "{{ .chezmoi.homeDir }}/.config/opencode/rules/*.md"
   ],
   "lsp": false,
   "snapshot": false,

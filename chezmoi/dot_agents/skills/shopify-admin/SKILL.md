@@ -1,6 +1,6 @@
 ---
 name: shopify-admin
-description: "Write or explain **Admin GraphQL** queries and mutations for apps and integrations that extend the Shopify admin. Use when the user wants to **understand, design, or generate** the operation itself—even before deciding how to run it. Do **not** choose `admin` first for **app or extension config validation** —use **`use-shopify-cli`**. Do **not** choose `admin` first to **execute** Admin GraphQL **now via Shopify CLI** or for CLI setup/troubleshooting on store workflows—use **`use-shopify-cli`** (store auth/execute, handle/SKU/location lookups, inventory changes)."
+description: "Write or explain Shopify Admin GraphQL queries and mutations for apps and integrations extending the admin. Use when understanding, designing, or generating the operation itself — even before deciding how to run it. Do NOT choose this first for app/extension config validation, or to execute Admin GraphQL now via the Shopify CLI (store auth/execute, handle/SKU/location lookups, inventory) — use `use-shopify-cli`."
 compatibility: Requires Node.js
 metadata:
   author: Shopify
