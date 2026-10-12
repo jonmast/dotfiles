@@ -1,0 +1,5 @@
+interface:
+  display_name: "Herdr Impl"
+  short_description: "Implement tickets in parallel Herdr worktrees"
+policy:
+  allow_implicit_invocation: false

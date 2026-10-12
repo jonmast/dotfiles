@@ -1,0 +1,439 @@
+#!/usr/bin/env python3
+"""Manage agent skills as upstream copies plus local edits, merged on update.
+
+Layout under SKILLS_SYNC_ROOT (default ~/.dotfiles/agents/skills):
+  sources.toml     skill name = upstream source (anything `npx skills add` accepts)
+  upstream/<name>  untouched upstream copy from the last update; the merge base
+  local/<name>     what agents load: upstream plus your edits. Edit this one.
+
+`link` symlinks each local/<name> into ~/.agents/skills. `update` three-way
+merges upstream changes into local/<name>, leaving conflict markers where your
+edits and upstream collide.
+"""
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import tomllib
+from pathlib import Path
+
+HOME = Path.home()
+ROOT = Path(os.environ.get("SKILLS_SYNC_ROOT", HOME / ".dotfiles/agents/skills")).expanduser()
+SOURCES = ROOT / "sources.toml"
+UPSTREAM = ROOT / "upstream"
+LOCAL = ROOT / "local"
+TARGET = Path(os.environ.get("SKILLS_SYNC_TARGET", HOME / ".agents/skills")).expanduser()
+DISABLED = TARGET / ".lazyskills-disabled"
+BACKUP = HOME / ".cache/skills-sync/replaced"
+
+IGNORE_GIT = shutil.ignore_patterns(".git")
+GIT = [
+    "git",
+    "-c", "user.name=skills-sync",
+    "-c", "user.email=skills-sync@localhost",
+    "-c", "commit.gpgsign=false",
+    "-c", "core.hooksPath=/dev/null",
+    "-c", "core.attributesFile=/dev/null",
+    "-c", "merge.conflictStyle=zdiff3",
+]
+GIT_ENV = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+
+class Error(Exception):
+    pass
+
+
+def strip_ansi(text):
+    return re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", text)
+
+
+def load_sources():
+    if not SOURCES.exists():
+        return {}
+    with SOURCES.open("rb") as f:
+        return tomllib.load(f)
+
+
+def save_sources(sources):
+    lines = ["# skill name = upstream source (anything `npx skills add` accepts)"]
+    lines += [f"{name} = {json.dumps(src)}" for name, src in sorted(sources.items())]
+    SOURCES.write_text("\n".join(lines) + "\n")
+
+
+def local_names():
+    if not LOCAL.is_dir():
+        return []
+    return sorted(p.name for p in LOCAL.iterdir() if p.is_dir())
+
+
+def remove(path):
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+
+
+def copy_tree(src, dst):
+    remove(dst)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(src, dst, symlinks=True, ignore=IGNORE_GIT)
+
+
+def snapshot(path):
+    """Relative path -> (kind, content) for every file, so trees can be compared."""
+    if not path.is_dir():
+        return None
+    files = {}
+    for p in path.rglob("*"):
+        rel = p.relative_to(path)
+        if ".git" in rel.parts:
+            continue
+        if p.is_symlink():
+            files[rel] = ("link", os.readlink(p))
+        elif p.is_file():
+            executable = bool(p.stat().st_mode & 0o100)
+            files[rel] = (executable, hashlib.sha256(p.read_bytes()).hexdigest())
+    return files
+
+
+def same_tree(a, b):
+    return snapshot(a) == snapshot(b)
+
+
+def has_edits(name):
+    return not same_tree(UPSTREAM / name, LOCAL / name)
+
+
+def require_clean():
+    status = subprocess.run(
+        ["git", "-C", str(ROOT), "status", "--porcelain", "--", "."],
+        capture_output=True, text=True, env=GIT_ENV,
+    )
+    if status.returncode:
+        raise Error(f"{ROOT} must be inside a git repository:\n{status.stderr.strip()}")
+    if status.stdout.strip():
+        raise Error(
+            f"{ROOT} has uncommitted changes. Commit or stash them first so "
+            "the update shows up as its own reviewable diff."
+        )
+
+
+def fetch(source, names, workdir):
+    """Install pristine copies of `names` from `source` into a throwaway HOME."""
+    home = Path(tempfile.mkdtemp(dir=workdir))
+    env = dict(
+        os.environ,
+        HOME=str(home),
+        XDG_CONFIG_HOME=str(home / ".config"),
+        XDG_DATA_HOME=str(home / ".local/share"),
+        XDG_STATE_HOME=str(home / ".local/state"),
+        CLAUDE_CONFIG_DIR=str(home / ".claude"),
+        CODEX_HOME=str(home / ".codex"),
+        DO_NOT_TRACK="1",
+        DISABLE_TELEMETRY="1",
+    )
+    env.setdefault("npm_config_cache", str(HOME / ".npm"))
+    cmd = ["npx", "-y", "skills", "add", source, "-g", "-y",
+           "--agent", "opencode", "--copy", "--skill", *names]
+    installed = home / ".agents/skills"
+    # Retry with --full-depth to reach skills nested below the ones the CLI lists
+    # by default, like Shopify's deprecated/ directory.
+    for extra in ([], ["--full-depth"]):
+        proc = subprocess.run([*cmd, *extra], cwd=home, env=env, capture_output=True, text=True)
+        missing = [n for n in names if not (installed / n / "SKILL.md").is_file()]
+        if not missing:
+            break
+    if proc.returncode or missing:
+        output = strip_ansi(proc.stdout + proc.stderr).strip()[-2000:]
+        raise Error(f"could not fetch {', '.join(missing or names)} from {source}:\n{output}")
+    return {n: installed / n for n in names}
+
+
+def fetch_all(names, sources, workdir):
+    """Fetch skills grouped by source. Returns (fetched paths, failure messages)."""
+    groups = {}
+    for name in names:
+        groups.setdefault(sources[name], []).append(name)
+    fetched, failures = {}, []
+    for source, group in groups.items():
+        print(f"fetching {source}: {' '.join(group)}", file=sys.stderr)
+        try:
+            fetched.update(fetch(source, group, workdir))
+        except Error as e:
+            failures.append(str(e))
+    return fetched, failures
+
+
+def merge(base, ours, theirs, workdir):
+    """Three-way merge upstream's change (base -> theirs) into ours.
+
+    Returns the merged tree and the paths left with conflicts.
+    """
+    repo = Path(tempfile.mkdtemp(dir=workdir))
+
+    def git(*args, check=True):
+        return subprocess.run([*GIT, "-C", str(repo), *args], check=check,
+                              capture_output=True, text=True, env=GIT_ENV)
+
+    def commit(tree, message):
+        for p in repo.iterdir():
+            if p.name != ".git":
+                remove(p)
+        shutil.copytree(tree, repo, symlinks=True, dirs_exist_ok=True, ignore=IGNORE_GIT)
+        git("add", "--all", "--force", ".")
+        git("commit", "-q", "--allow-empty", "--no-verify", "-m", message)
+
+    git("init", "-q", "--template=", "-b", "base")
+    commit(base, "base")
+    git("checkout", "-q", "-b", "theirs")
+    commit(theirs, "theirs")
+    git("checkout", "-q", "-b", "ours", "base")
+    commit(ours, "ours")
+    result = git("merge", "--no-edit", "-q", "theirs", check=False)
+    conflicts = git("diff", "--name-only", "--diff-filter=U").stdout.splitlines()
+    if result.returncode and not conflicts:
+        raise Error(f"merge failed:\n{result.stdout}{result.stderr}")
+    for path in conflicts:
+        relabel_markers(repo / path)
+    return repo, conflicts
+
+
+def relabel_markers(path):
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError, IsADirectoryError):
+        return
+    text = re.sub(r"^<<<<<<< HEAD$", "<<<<<<< local", text, flags=re.M)
+    text = re.sub(r"^\|\|\|\|\|\|\| \w+$", "||||||| old upstream", text, flags=re.M)
+    text = re.sub(r"^>>>>>>> theirs$", ">>>>>>> new upstream", text, flags=re.M)
+    path.write_text(text)
+
+
+def select(names, sources):
+    if not names:
+        return sorted(sources)
+    unknown = [n for n in names if n not in sources]
+    if unknown:
+        raise Error(f"not upstream-managed: {', '.join(unknown)}")
+    return names
+
+
+def cmd_status(args):
+    sources = load_sources()
+    rows = []
+    for name in local_names():
+        source = sources.get(name, "(local only)")
+        edits = "edited" if name in sources and has_edits(name) else ""
+        rows.append((name, source, edits, link_state(name)))
+    for name in sorted(set(sources) - set(local_names())):
+        rows.append((name, sources[name], "", "missing local copy"))
+    width = [max((len(r[i]) for r in rows), default=0) for i in range(3)]
+    for row in rows:
+        print("  ".join(col.ljust(w) for col, w in zip(row, width + [0])).rstrip())
+
+
+def cmd_check(args):
+    sources = load_sources()
+    names = select(args.names, sources)
+    with tempfile.TemporaryDirectory(prefix="skills-sync-") as tmp:
+        fetched, failures = fetch_all(names, sources, tmp)
+        for name in names:
+            if name not in fetched:
+                continue
+            state = "up to date" if same_tree(UPSTREAM / name, fetched[name]) else "update available"
+            edits = " (has local edits)" if has_edits(name) else ""
+            print(f"{name}: {state}{edits}")
+    for failure in failures:
+        print(f"skills-sync: {failure}", file=sys.stderr)
+    return 1 if failures else 0
+
+
+def cmd_update(args):
+    require_clean()
+    sources = load_sources()
+    names = select(args.names, sources)
+    conflicted = {}
+    changed = []
+    with tempfile.TemporaryDirectory(prefix="skills-sync-") as tmp:
+        fetched, failures = fetch_all(names, sources, tmp)
+        for name in names:
+            if name not in fetched:
+                continue
+            new, base, local = fetched[name], UPSTREAM / name, LOCAL / name
+            if same_tree(base, new):
+                continue
+            if not base.is_dir():
+                if not local.is_dir():
+                    copy_tree(new, local)
+                print(f"{name}: no upstream base recorded; stored it, local copy left as is")
+            elif not local.is_dir() or same_tree(base, local):
+                copy_tree(new, local)
+                print(f"{name}: updated")
+            else:
+                tree, conflicts = merge(base, local, new, tmp)
+                copy_tree(tree, local)
+                if conflicts:
+                    conflicted[name] = conflicts
+                    print(f"{name}: merged with CONFLICTS")
+                else:
+                    print(f"{name}: merged upstream changes into your edits")
+            copy_tree(new, base)
+            changed.append(name)
+    if not changed and not failures:
+        print("everything up to date")
+    for name, files in conflicted.items():
+        print(f"\nresolve conflict markers in {LOCAL / name}:")
+        for f in files:
+            print(f"  {f}")
+    if changed:
+        print(f"\nreview with: git -C {ROOT} diff -- local")
+    for failure in failures:
+        print(f"skills-sync: {failure}", file=sys.stderr)
+    return 1 if conflicted or failures else 0
+
+
+def cmd_diff(args):
+    sources = load_sources()
+    names = args.names or [n for n in sorted(sources) if has_edits(n)]
+    if not names:
+        print("no local edits")
+        return 0
+    for name in names:
+        if name not in sources:
+            raise Error(f"not upstream-managed: {name}")
+        cmd = ["git", "diff", "--no-index"]
+        if args.stat:
+            cmd.append("--stat")
+        subprocess.run([*cmd, "--", f"upstream/{name}", f"local/{name}"], cwd=ROOT, env=GIT_ENV)
+    return 0
+
+
+def cmd_add(args):
+    sources = load_sources()
+    taken = [n for n in args.names if n in sources or (LOCAL / n).exists()]
+    if taken:
+        raise Error(f"already managed: {', '.join(taken)}")
+    existing = {}
+    if args.adopt:
+        for name in args.names:
+            for candidate in (TARGET / name, DISABLED / name):
+                if candidate.is_dir() and not candidate.is_symlink():
+                    existing[name] = candidate
+                    break
+            else:
+                raise Error(f"--adopt: no installed copy of {name} in {TARGET}")
+    with tempfile.TemporaryDirectory(prefix="skills-sync-") as tmp:
+        fetched = fetch(args.source, args.names, tmp)
+        for name, path in fetched.items():
+            copy_tree(path, UPSTREAM / name)
+            copy_tree(existing.get(name, path), LOCAL / name)
+            sources[name] = args.source
+            edits = " (installed copy differs from upstream, see `skills-sync diff`)" \
+                if has_edits(name) else ""
+            print(f"{name}: added{edits}")
+    save_sources(sources)
+    return link(replace=True)
+
+
+def link_state(name):
+    dst = TARGET / name
+    if DISABLED.joinpath(name).exists() or DISABLED.joinpath(name).is_symlink():
+        return "disabled"
+    if dst.is_symlink():
+        return "linked" if Path(os.readlink(dst)) == LOCAL / name else "linked elsewhere"
+    if dst.exists():
+        return "blocked by a real directory"
+    return "not linked"
+
+
+def link(replace=False, quiet=False):
+    TARGET.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    blocked = []
+    for name in local_names():
+        state = link_state(name)
+        if state in ("linked", "disabled"):
+            continue
+        dst = TARGET / name
+        if state == "linked elsewhere":
+            dst.unlink()
+        elif state == "blocked by a real directory":
+            if not replace:
+                blocked.append(name)
+                continue
+            backup = BACKUP / stamp / name
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(dst, backup)
+            print(f"{name}: moved existing copy to {backup}")
+        dst.symlink_to(LOCAL / name)
+        if not quiet:
+            print(f"{name}: linked")
+    for dst in TARGET.iterdir():
+        if dst.is_symlink() and Path(os.readlink(dst)).parent == LOCAL and not dst.exists():
+            dst.unlink()
+            print(f"{dst.name}: removed stale link")
+    if blocked:
+        print(
+            f"skills-sync: not linked because real directories are in the way: {', '.join(blocked)}\n"
+            f"  rerun `skills-sync link --replace` to move them to {BACKUP}",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
+def cmd_link(args):
+    return link(replace=args.replace, quiet=args.quiet)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="skills-sync", description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    sub.add_parser("status", help="list managed skills, local edits and link state")
+
+    p = sub.add_parser("check", help="report upstream updates without changing anything")
+    p.add_argument("names", nargs="*")
+
+    p = sub.add_parser("update", help="merge upstream changes into local copies")
+    p.add_argument("names", nargs="*")
+
+    p = sub.add_parser("diff", help="show local edits against upstream (default: all edited)")
+    p.add_argument("names", nargs="*")
+    p.add_argument("--stat", action="store_true")
+
+    p = sub.add_parser("add", help="start managing skills from an upstream source")
+    p.add_argument("source", help="anything `npx skills add` accepts, e.g. github/gh-stack")
+    p.add_argument("names", nargs="+")
+    p.add_argument("--adopt", action="store_true",
+                   help=f"use the copy already installed in {TARGET} as the local copy, keeping edits")
+
+    p = sub.add_parser("link", help=f"symlink local copies into {TARGET}")
+    p.add_argument("--replace", action="store_true",
+                   help=f"move real directories in the way to {BACKUP}")
+    p.add_argument("--quiet", action="store_true")
+
+    args = parser.parse_args()
+    commands = {
+        "status": cmd_status, "check": cmd_check, "update": cmd_update,
+        "diff": cmd_diff, "add": cmd_add, "link": cmd_link,
+    }
+    try:
+        sys.exit(commands[args.command](args) or 0)
+    except Error as e:
+        print(f"skills-sync: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

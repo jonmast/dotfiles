@@ -1,0 +1,5 @@
+{{- /* diogenes manages its agent skills outside chezmoi; see .chezmoiignore */ -}}
+{{- if ne .chezmoi.hostname "diogenes" -}}
+#!/bin/sh
+exec "{{ .chezmoi.homeDir }}/.local/bin/skills-sync" link --quiet
+{{ end -}}
