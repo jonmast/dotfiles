@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Block until a worker settles, then print one JSON line:
 #   {"state":"idle"}                       turn closed, nothing in its session tree running
+#   {"state":"interrupted"}                turn closed early: aborted, or the server restarted
+#   {"state":"failed"}                     turn closed on an error, e.g. the provider refused
 #   {"state":"blocked","permissions":[…]}  a permission request is pending (worker or subagent)
 #   {"state":"asking","forms":[…]}         a question form is waiting in the worker's TUI
 #   {"state":"stalled","last":"<type>"}    nothing running, yet the turn never closed
@@ -72,12 +74,17 @@ while :; do
   if (( busy )); then
     calm=0 quiet=0
   else
-    last=$(api get "/api/session/$sid/message?limit=1&order=desc" | jq -r '.data[0].type // "none"')
+    newest=$(api get "/api/session/$sid/message?limit=1&order=desc")
+    last=$(jq -r '.data[0].type // "none"' <<<"$newest")
     queued=$(api get "/api/session/$sid/inbox" | jq '.data | length')
     if [[ $last == idle && $queued == 0 ]]; then
       quiet=0
       if (( ++calm >= 2 )); then
-        echo '{"state":"idle"}'
+        case $(jq -r '.data[0].outcome // "succeeded"' <<<"$newest") in
+          interrupted) echo '{"state":"interrupted"}' ;;
+          failed) echo '{"state":"failed"}' ;;
+          *) echo '{"state":"idle"}' ;;
+        esac
         exit 0
       fi
     else
