@@ -63,9 +63,19 @@ The app list, `apps`, is learned rather than configured. The protocol can say
 which app is in front but has no way to ask what is installed, and Roku's
 `query/apps` is the wrong device — it knows the set's apps, not the
 streamer's. So every package seen in front gets remembered, most recent
-first, and `launch` can put any of them back. An app you have never opened is
-not offered, which is the point: launching a package that is not installed
-lands the TV in the Play Store.
+first. An app you have never opened is not offered, which is the point:
+launching a package that is not installed lands the TV in the Play Store.
+
+Only apps in LAUNCH_LINKS are offered, though, because a package name alone
+no longer launches anything. The protocol's launch request takes a link, and
+the library turns a bare package into `market://launch?id=<pkg>`, which Play
+Store stopped honouring in its August 2026 update — the streamer answers with
+an error and drops the session. Other package-only forms fare no better:
+`intent:` URIs are refused the same way, and `android-app://<pkg>` is treated
+as a plain link and opened by whatever claims it (The Roku Channel, here).
+What still works is a link the app itself registers, so each app needs its
+own, found by trying candidates on the TV. Apps that register none (Jellyfin,
+FCast) cannot be launched this way at all.
 
 Config is ~/.config/googletv/config.json:
 
@@ -123,6 +133,18 @@ LAUNCHERS = frozenset(
         "com.google.android.tvrecommendations",
     }
 )
+# Package → a link that brings it to the front; see "the app list" above.
+# Each one verified on the streamer: the obvious custom scheme is often
+# refused (disneyplus://, max://, peacock://) where the website is not, and
+# a website link only works if the app claims that exact path — Peacock
+# takes /deeplink but leaves /watch/home to the launcher.
+LAUNCH_LINKS = {
+    "com.google.android.youtube.tv": "vnd.youtube://",
+    "com.spotify.tv.android": "spotify://",
+    "com.disney.disneyplus": "https://www.disneyplus.com",
+    "com.wbd.stream": "https://play.max.com",
+    "com.peacocktv.peacockandroid": "https://www.peacocktv.com/deeplink",
+}
 
 RETRY_MIN = 2
 RETRY_MAX = 60
@@ -138,6 +160,23 @@ POWER_MODE = re.compile(r"<power-mode>([^<]*)</power-mode>")
 # The library puts no bound on the TCP connect; a wrong or dark address would
 # otherwise sit in "connecting" for the kernel's full SYN retry (minutes).
 CONNECT_TIMEOUT = 10
+
+
+class DeviceErrorWatch(logging.Handler):
+    """Turns the library's log line for a device error into bridge state.
+
+    androidtvremote2 has no callback for the TV's `remote_error` reply — it
+    only logs it — so a refused launch would otherwise look like a click that
+    did nothing.
+    """
+
+    def __init__(self, bridge: "Bridge") -> None:
+        super().__init__(logging.ERROR)
+        self.bridge = bridge
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if record.getMessage().startswith("Received an error from the device"):
+            self.bridge.on_device_error()
 
 
 class Bridge:
@@ -156,12 +195,18 @@ class Bridge:
         self.remote: AndroidTVRemote | None = None
         self.connect_task: asyncio.Task | None = None
         self.retry_wakeup = asyncio.Event()
+        # The last package sent to `launch`, and the error to show once the
+        # session the TV dropped over refusing it is back up.
+        self.launching: str | None = None
+        self.refusal = ""
+        logging.getLogger("androidtvremote2").addHandler(DeviceErrorWatch(self))
 
     # ---- state --------------------------------------------------------
 
     @property
     def apps(self) -> list[str]:
-        return sorted(self.seen, key=self.seen.__getitem__, reverse=True)[:APP_LIMIT]
+        launchable = [app for app in self.seen if app in LAUNCH_LINKS]
+        return sorted(launchable, key=self.seen.__getitem__, reverse=True)[:APP_LIMIT]
 
     def emit(self) -> None:
         print(
@@ -227,6 +272,8 @@ class Bridge:
             logging.exception("could not save the app list")
 
     def note_app(self, app: str | None) -> None:
+        if app == self.launching:
+            self.launching = None
         self.learn(app)
         self.set(app=app)
 
@@ -247,7 +294,8 @@ class Bridge:
             # fires on a CHANGE, so an app left running across a dropped
             # session would otherwise never make it into the list.
             self.learn(self.remote.current_app)
-            self.set(status="connected", error="", powered=self.remote.is_on, app=self.remote.current_app)
+            error, self.refusal = self.refusal, ""
+            self.set(status="connected", error=error, powered=self.remote.is_on, app=self.remote.current_app)
         else:
             self.set(status="reconnecting", powered=None, app=None)
 
@@ -410,8 +458,13 @@ class Bridge:
         if not app:
             self.set(error="launch needs a package")
             return
+        link = LAUNCH_LINKS.get(app)
+        if not link:
+            self.set(error=f"no launch link for {app}")
+            return
+        self.launching = app
         try:
-            self.remote.send_launch_app_command(app)
+            self.remote.send_launch_app_command(link)
         except ConnectionClosed:
             self.set(error="connection dropped")
             return
@@ -419,6 +472,17 @@ class Bridge:
         # callback; nothing to record here.
         if self.error:
             self.set(error="")
+
+    def on_device_error(self) -> None:
+        # The TV drops the session right after an error, and the reconnect
+        # clears `error`, so the message is parked in `refusal` for
+        # on_available to show rather than set here and wiped a moment later.
+        if self.launching:
+            self.refusal = f"the TV would not open {self.launching}"
+            self.launching = None
+        else:
+            self.refusal = "the TV rejected a command"
+        self.set(error=self.refusal)
 
     async def cmd_power(self, arg: str) -> None:
         if arg not in ("on", "off"):

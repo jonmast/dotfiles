@@ -36,7 +36,9 @@ Singleton {
     // Packages the bridge has seen in front, most recent first. Learned, not
     // configured: the protocol will not say what is installed, so this is the
     // only list that can be both accurate and unattended. Empty on a fresh
-    // state dir and fills in as the TV gets used.
+    // state dir and fills in as the TV gets used. Limited to apps the bridge
+    // has a launch link for (LAUNCH_LINKS in the script), so a newly installed
+    // app needs an entry there before it shows up.
     property var apps: []
     property var volume: null
     property string error: ""
