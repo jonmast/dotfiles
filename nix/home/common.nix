@@ -56,6 +56,7 @@ in
     pi-coding-agent
     pv-migrate
     python3
+    qbittorrent
     restic
     ripgrep
     rustfmt
