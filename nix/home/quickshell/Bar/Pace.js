@@ -5,25 +5,22 @@
 // "Am I on pace?" needs to know how far through the window we are, which needs
 // a window START — really a window LENGTH, since the reset time is known.
 //
-// The plugin now supplies both `windowSeconds` and a computed `projection` on
-// most windows, and `ai-quota.py` plumbs them through. That is the preferred
-// path and is tried first.
+// Sextant supplies both `windowSeconds` and a computed `projection` on most
+// windows, and `ai-quota.py` plumbs them through. That is the preferred path
+// and is tried first.
 //
 // It is not universal, though, so the fallback below is live code rather than
-// scaffolding. Three windows arrive with no projection: `claude/extra` and
-// `opencode-go/monthly` have no span for the plugin to forecast against, and
-// Claude's model-scoped weeklies (`claude-weekly-scoped-*`) arrive with
-// neither span nor forecast. The ID table covers that last case — the
-// collector deliberately does not guess their span, so the guess lives here,
-// where it can be tagged `inferred: true` and shown as such.
+// scaffolding: OpenCode Go's `rolling` has no fixed cycle start for Sextant to
+// forecast against, so it arrives with neither span nor projection. The ID
+// table covers windows like that, and the guess lives here, where it can be
+// tagged `inferred: true` and shown as such.
 
 // Fixed-length windows, in milliseconds. Keyed on the IDs the collector emits.
 var FIXED = {
-    "five_hour": 5 * 3600 * 1000,
-    "seven_day": 7 * 86400 * 1000,
+    "5h": 5 * 3600 * 1000,
+    "7d": 7 * 86400 * 1000,
     "weekly": 7 * 86400 * 1000,
-    // OpenCode Go's usage-triggered 5h window. The plugin already hardcodes
-    // this span (providers.go:45), so the real record will carry it.
+    // OpenCode Go's usage-triggered 5h window.
     "rolling": 5 * 3600 * 1000
 };
 
@@ -31,10 +28,7 @@ var FIXED = {
 // Their length varies (28-31 days), so it is measured back from the reset date
 // rather than assumed.
 var CALENDAR_MONTH = {
-    "monthly": true,
-    "premium_interactions": true,
-    "chat": true,
-    "completions": true
+    "monthly": true
 };
 
 // NOTE: "rolling" windows need no special case. A rolling window is started by
@@ -58,9 +52,10 @@ function durationFor(id, resetAtMs) {
     if (FIXED[id])
         return FIXED[id];
 
-    // Claude's per-model scoped limits ride the weekly window.
-    if (id.indexOf("claude-weekly-scoped-") === 0)
-        return FIXED["seven_day"];
+    // Per-model limits (`7d_fable`) ride the span their id starts with.
+    var span = id.split("_")[0];
+    if (span !== id && FIXED[span])
+        return FIXED[span];
 
     if (CALENDAR_MONTH[id] && resetAtMs) {
         var reset = new Date(resetAtMs);
@@ -76,9 +71,9 @@ function durationFor(id, resetAtMs) {
 // honestly be produced. Every caller must handle the unknown case: refusing to
 // answer is a valid answer, and a made-up projection on a quota widget is worse
 // than no projection.
-// PREFERRED PATH: the plugin computed the projection and we just render it.
+// PREFERRED PATH: Sextant computed the projection and we just render it.
 //
-// The plugin can weight elapsed time by a usage PROFILE — "81% of a typical
+// Sextant can weight elapsed time by a usage PROFILE — "81% of a typical
 // week's burn is already behind you" — which the client cannot do, because the
 // client has no history. `expectedFraction` is that profile figure;
 // `elapsedFraction` is the raw clock. The gap between them is informative on
@@ -86,13 +81,13 @@ function durationFor(id, resetAtMs) {
 // trouble and your actual pattern says you are not.
 //
 // `basis: "uniform"` means the profile had nothing to go on (cold start) and
-// the plugin fell back to clock-only, in which case the two fractions are
+// Sextant fell back to clock-only, in which case the two fractions are
 // equal and there is no second opinion to show.
 function fromProjection(window, pct, projection) {
     var expected = projection.expectedFraction * 100;
     return {
         "known": true,
-        "source": "plugin",
+        "source": "sextant",
         "inferred": false,
         "usedPercent": pct,
         // Profile-weighted. This is the one the UI should lead with.
@@ -152,7 +147,7 @@ function compute(window, nowMs) {
     }
 
     // FALLBACK: no projection on the window, so do the clock-only arithmetic
-    // here. Equivalent to the plugin's `basis: "uniform"` cold-start answer.
+    // here. Equivalent to Sextant's `basis: "uniform"` cold-start answer.
     return {
         "known": true,
         "source": "client",
@@ -164,7 +159,7 @@ function compute(window, nowMs) {
         "basis": "uniform",
         "disagrees": false,
         // True when the duration came from the ID table rather than from the
-        // provider — i.e. the plugin has not been taught this window yet.
+        // provider — i.e. Sextant has not been taught this window yet.
         "inferred": inferred,
         "startMs": startMs,
         "durationMs": duration,
@@ -184,7 +179,7 @@ function verdict(pace) {
     if (!pace.known)
         return { "text": "—", "tone": "neutral" };
 
-    // The plugin's verdict wins when there is one: it was computed against a
+    // Sextant's verdict wins when there is one: it was computed against a
     // usage profile the client cannot see, so second-guessing it from the
     // delta alone would throw away the better answer.
     if (pace.verdict === "will_exhaust")

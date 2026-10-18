@@ -222,7 +222,7 @@ Item {
                 //
                 // When the two coincide the arcs are equal length, which is
                 // itself the correct reading: no usage profile, so the clock is
-                // all the plugin had to go on.
+                // all Sextant had to go on.
                 lane(clockR, root.clockThickness, known ? band.clockPct : null, Qt.rgba(root.clockColor.r, root.clockColor.g, root.clockColor.b, 0.55), true, false, hClock);
             }
         }

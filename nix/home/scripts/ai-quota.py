@@ -2,89 +2,83 @@
 """Collect multi-provider AI quota into one display-ready JSON record.
 
 Everything the bar widget shows comes from this one command. The QML never
-talks to an endpoint, never sees the admin key, and never parses a provider's
-wire format — it reads the record printed here. That split is lifted from
-omarchy's `omarchy-agent-usage-claude`, and it earns its keep for the same
-reason: the two data sources below have completely different failure modes,
-and none of that belongs in a widget.
+talks to an endpoint and never parses a wire format — it reads the record
+printed here. That split is lifted from omarchy's `omarchy-agent-usage-claude`,
+and it earns its keep for the same reason: the two data sources below have
+different failure modes, and none of that belongs in a widget.
 
-One source, one call:
+Both come from Sextant, the Telemetry Hub (jonmast/bifrost-meridian), which
+polls the upstreams itself and serves what it stored:
 
-  Quota   GET {base}/v0/management/plugins/cpa-quota-api-extension/v1/quotas
-          served by the cpa-quota-api-extension plugin on the live CPA instance.
-          The plugin returns a normalized, provider-nested snapshot covering
-          every provider (Claude, Copilot, OpenCode Go). All provider knowledge
-          — endpoints, payload shapes, window selection, percent normalization —
-          lives in the plugin; this client makes one authenticated GET and
-          formats the result. It contains no provider-specific endpoint or
-          payload knowledge, so a new provider needs no client change.
+  Quota   GET {base}/v1/quota
+          One window map per upstream (Claude, OpenCode Go), each window with
+          its utilization, reset time and pace projection. `--force` sends
+          POST {base}/v1/quota/refresh instead, which returns the same body;
+          Sextant skips an upstream it polled under 30 s ago, so the client
+          needs no rate limiting of its own.
 
-  Usage   GET {base}/v0/management/dashboard/summary, served from CPAMP's local
-          SQLite (drained from CPA's usage queue). No upstream call, cheap, and
-          safe to refresh often.
+  Usage   GET {base}/v1/usage/summary?since=<local midnight, RFC 3339>
+          Today's totals over every Gateway request, from Sextant's own copy of
+          the request log. No upstream call, cheap, and safe to refresh often.
 
-The quota route is read-only and cached by the plugin itself, so the only
-client-side cache here protects against CPAMP being unreachable: a stale
-reading is served rather than blanking the bar. The widget distinguishes
+Both routes are served without auth. Everything else on the host sits behind
+forward-auth, so a route that has fallen through to the UI Ingress answers with
+an HTML redirect to the login page; any non-JSON answer is therefore an error,
+never data.
+
+The only client-side cache here protects against Sextant being unreachable: a
+stale reading is served rather than blanking the bar. The widget distinguishes
 stale/failed records by reading `ok`/`stale`, not by guessing an exit code.
-
-Note what is NOT used: `/v0/management/usage-queue` is a destructive pop —
-reading it removes records CPAMP needs for its own history. And `/v0/management/
-usage` returns the full per-request detail (247KB and growing), where
-dashboard/summary returns the same totals pre-aggregated.
 """
 
 import argparse
 import datetime as dt
 import json
 import os
-import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
-BASE_URL = os.environ.get("AI_QUOTA_BASE_URL", "http://cpamp.homelab.jonmast.com")
+BASE_URL = os.environ.get("AI_QUOTA_BASE_URL", "https://quota.homelab.jonmast.com")
 
-# The single read-only route the plugin exposes. One GET returns a normalized,
-# provider-nested snapshot for every provider; the client never assembles
-# provider calls itself. `?refresh=true` forces the plugin past its cache.
-QUOTA_ROUTE = "/v0/management/plugins/cpa-quota-api-extension/v1/quotas"
-
-WALLET = os.environ.get("AI_QUOTA_WALLET", "kdewallet")
-WALLET_FOLDER = os.environ.get("AI_QUOTA_WALLET_FOLDER", "cpamp")
-WALLET_ENTRY = os.environ.get("AI_QUOTA_WALLET_ENTRY", "admin-key")
+QUOTA_ROUTE = "/v1/quota"
+REFRESH_ROUTE = "/v1/quota/refresh"
+USAGE_ROUTE = "/v1/usage/summary"
 
 # Display-only metadata for the pill prefix and tooltip header. These are
-# cosmetic labels, not endpoint or payload knowledge: any provider key not
-# listed falls back to a derived two-letter code and a title-cased name, so a
-# new provider needs no client change.
+# cosmetic labels, not endpoint or payload knowledge: any upstream not listed
+# falls back to a derived two-letter code and a title-cased name, so a new
+# upstream needs no client change.
 PROVIDER_META = {
     "claude": ("CC", "Claude"),
-    "copilot": ("GH", "Copilot"),
     "opencode-go": ("OC", "OpenCode Go"),
 }
 
-# Display-only window labels. Unknown ids fall back to a title-cased slug, so a
-# provider that introduces a new window id still renders.
+# Window ids that name a span. Sextant reports a per-model limit as an ordinary
+# window whose id is a span plus a model suffix (`7d_fable`), so an id of the
+# form `<span>_<model>` is the per-model subdivision of that span.
+SPAN_NAMES = {
+    "5h": "session",
+    "7d": "weekly",
+}
+
+# Display-only window labels. Unknown ids fall back to a title-cased slug, so an
+# upstream that introduces a new window id still renders.
 WINDOW_LABELS = {
-    "five_hour": "Session (5h)",
-    "seven_day": "Weekly (7d)",
-    "extra": "Extra usage",
-    "premium_interactions": "Premium interactions",
-    "chat": "Chat",
-    "completions": "Completions",
+    "5h": "Session (5h)",
+    "7d": "Weekly (7d)",
+    "7d_fable": "Fable weekly (7d)",
     "rolling": "Rolling",
     "weekly": "Weekly",
     "monthly": "Monthly",
 }
 
 # Deliberately short, because this TTL does NOT govern upstream request rate —
-# the plugin owns its own cache and only calls providers on a miss, so a client
-# fetch inside the plugin's TTL is a clone of an in-memory snapshot. Holding a
-# reading here for longer than the plugin holds its own only adds latency
-# between the plugin refreshing and the bar showing it. Set this at or below the
-# plugin's `cache-ttl` and let the plugin decide what upstream costs.
+# Sextant polls the upstreams on its own schedule, so a client fetch only reads
+# what it already stored. Holding a reading here longer only adds latency
+# between Sextant polling and the bar showing it.
 QUOTA_TTL_SECONDS = int(os.environ.get("AI_QUOTA_TTL", "60"))
 USAGE_TTL_SECONDS = int(os.environ.get("AI_QUOTA_USAGE_TTL", "300"))
 HTTP_TIMEOUT = 20
@@ -122,59 +116,29 @@ def now_ms():
     return int(time.time() * 1000)
 
 
-def admin_key():
-    """Read the CPAMP admin key from kwallet.
-
-    The key never appears in the process table, in the environment, or in this
-    repository. kwallet is unlocked at login by kwallet-pam (CONTEXT.md, "KDE
-    infra"), so by the time the bar is running the wallet is open.
-    """
-    try:
-        result = subprocess.run(
-            ["kwallet-query", "-f", WALLET_FOLDER, "-r", WALLET_ENTRY, WALLET],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except Exception:
-        return ""
-    if result.returncode != 0:
-        return ""
-    key = result.stdout.strip()
-    # kwallet-query prints a human-readable complaint on stdout rather than
-    # failing when the entry is absent, so an implausible value is treated as no
-    # key at all instead of being sent as a bearer token.
-    if not key or "not found" in key.lower():
-        return ""
-    return key
-
-
-def request_json(url, key, method="GET", body=None):
-    """One HTTP call to CPAMP. Returns (payload, error, retry_after_seconds)."""
-    data = None
-    headers = {"Authorization": "Bearer " + key, "Accept": "application/json"}
-    if body is not None:
-        data = json.dumps(body).encode("utf-8")
-        headers["Content-Type"] = "application/json"
-    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+def request_json(url, method="GET"):
+    """One HTTP call to Sextant. Returns (payload, error)."""
+    request = urllib.request.Request(url, headers={"Accept": "application/json"}, method=method)
     try:
         with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as response:
-            return json.loads(response.read().decode("utf-8", errors="replace")), "", 0
+            content_type = response.headers.get("Content-Type", "")
+            body = response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as error:
-        retry_after = 0
-        if error.headers:
-            try:
-                retry_after = int(error.headers.get("retry-after", "0") or 0)
-            except ValueError:
-                retry_after = 0
-        if error.code in (401, 403):
-            return None, "CPAMP rejected the admin key", 0
-        return None, "CPAMP returned status %d" % error.code, retry_after
+        return None, "Sextant returned status %d" % error.code
     except Exception:
-        # No server was reached at all — no route, no DNS, homelab down. Worth
-        # distinguishing from a real error status, because it should not start a
-        # long backoff: the endpoint never said it was busy.
-        return None, "Couldn't reach CPAMP", 0
+        return None, "Couldn't reach Sextant"
+
+    # urllib follows redirects, so a route that fell through to forward-auth
+    # arrives here as a 200 carrying the login page.
+    if "json" not in content_type:
+        return None, "Sextant answered with %s, not JSON (route behind forward-auth?)" % (content_type or "no content type")
+    try:
+        payload = json.loads(body)
+    except ValueError:
+        return None, "Sextant returned malformed JSON"
+    if not isinstance(payload, dict):
+        return None, "Sextant returned an unexpected JSON shape"
+    return payload, ""
 
 
 def iso_to_ms(value):
@@ -216,25 +180,34 @@ def provider_name(key):
     return key.replace("-", " ").replace("_", " ").title()
 
 
+def model_span(window_id):
+    """The span a per-model window subdivides (`7d` for `7d_fable`), or ""."""
+    span, sep, model = window_id.partition("_")
+    if sep and model and span in SPAN_NAMES:
+        return span
+    return ""
+
+
 def window_label(window_id):
     if window_id in WINDOW_LABELS:
         return WINDOW_LABELS[window_id]
+    span = model_span(window_id)
+    if span:
+        model = window_id[len(span) + 1 :].replace("_", " ").title()
+        return "%s %s (%s)" % (model, SPAN_NAMES[span], span)
     return window_id.replace("_", " ").title()
 
 
-def build_projection(projection):
-    """Normalize the plugin's forecast block, or None when it did not send one.
+def build_projection(window):
+    """Normalize a window's forecast fields, or None when it has none.
 
-    The plugin declines to forecast a window it cannot honestly forecast — one
-    with no duration, or one too early in its span to extrapolate from. That is
-    a real answer, so an absent block is passed through as None rather than
-    being filled in here: the client already has a clock-only fallback, and it
-    needs to know which of the two readings it is showing.
+    Sextant declines to forecast a window it cannot honestly forecast — one
+    with no fixed cycle start (`rolling`) or no reset time — and says so with a null
+    `expected_fraction`. That is a real answer, so it is passed through as None
+    rather than being filled in here: the client already has a clock-only
+    fallback, and it needs to know which of the two readings it is showing.
     """
-    if not isinstance(projection, dict):
-        return None
-
-    expected = projection.get("expected_fraction")
+    expected = window.get("expected_fraction")
     if expected is None:
         return None
 
@@ -245,134 +218,107 @@ def build_projection(projection):
         "expectedFraction": expected,
         # Raw wall-clock progress. Equal to the above when `basis` is
         # "uniform", i.e. the profile had no history to go on.
-        "elapsedFraction": projection.get("elapsed_fraction"),
-        "projectedUsedPercent": projection.get("projected_used_percent"),
-        "naiveProjectedPercent": projection.get("naive_projected_percent"),
+        "elapsedFraction": window.get("elapsed_fraction"),
+        "projectedUsedPercent": window.get("projected_used_percent"),
+        "naiveProjectedPercent": window.get("naive_projected_percent"),
         # None rather than 0 when the forecast never crosses the limit — the
         # client distinguishes "no exhaustion predicted" from a timestamp.
-        "projectedExhaustionAtMs": iso_to_ms(projection.get("projected_exhaustion_at")) or None,
-        "verdict": projection.get("verdict", ""),
-        "confidence": projection.get("confidence", ""),
-        "basis": projection.get("basis", ""),
+        "projectedExhaustionAtMs": iso_to_ms(window.get("projected_exhaustion")) or None,
+        "verdict": window.get("verdict") or "",
+        "confidence": window.get("confidence") or "",
+        "basis": window.get("basis") or "",
     }
 
 
-def build_window(window_id, label, used, remaining, reset_at, used_dollars, limit_dollars, binding, model=False, window_seconds=None, projection=None):
+def build_window(window_id, window):
+    used = window.get("utilization")
     return {
         "id": window_id,
-        "label": label,
+        "label": window_label(window_id),
         "usedPercent": used,
-        "remainingPercent": remaining,
-        "resetAtMs": iso_to_ms(reset_at),
-        "usedDollars": used_dollars,
-        "limitDollars": limit_dollars,
-        "binding": binding,
-        "model": model,
+        "remainingPercent": None if used is None else 100 - used,
+        "resetAtMs": iso_to_ms(window.get("resets_at")),
+        "usedDollars": None,
+        "limitDollars": None,
+        "binding": False,
+        "model": bool(model_span(window_id)),
         # How long the window spans. With the reset time this recovers the
-        # window's START, which is what any pace reading needs. Absent for
-        # windows the plugin has no span for (Claude's `extra`, OpenCode Go's
-        # `monthly`), so the client must treat it as optional.
-        "windowSeconds": window_seconds,
-        "projection": projection,
+        # window's START, which is what any pace reading needs. Null for
+        # windows with no fixed cycle, so the client must treat it as optional.
+        "windowSeconds": window.get("window_seconds"),
+        # Sextant marks a window stale once it is older than three of its poll
+        # intervals: the upstream has stopped answering for it.
+        "stale": window.get("stale") is True,
+        "projection": build_projection(window),
     }
 
 
-def parse_provider(key, provider):
-    """Normalize one provider entry into the display shape.
+def parse_provider(key, upstream):
+    """Normalize one Sextant upstream into the display shape.
 
-    Windows carry `used_percent` (0-100) identical in semantics across every
-    provider, so the pill can compare them numerically. Claude's model-scoped
-    weeklies arrive as `models[]` rather than `windows[]`; they are folded in as
-    windows (used = 100 - remaining) so they compete for the pill and appear in
-    the tooltip.
+    Windows carry `utilization` (0-100) identical in semantics across every
+    upstream, so the pill can compare them numerically. Per-model limits are
+    ordinary windows on the wire and are only flagged `model` here.
     """
-    binding_id = ""
-    binding = provider.get("binding_window")
-    if isinstance(binding, dict):
-        binding_id = binding.get("id", "") or ""
+    windows_map = upstream.get("windows") or {}
+    windows = [
+        build_window(window_id, windows_map[window_id])
+        for window_id in sorted(windows_map.keys())
+        if isinstance(windows_map[window_id], dict)
+    ]
 
-    windows = []
-    for window in provider.get("windows") or []:
-        if not isinstance(window, dict):
-            continue
-        window_id = window.get("id", "")
-        used = window.get("used_percent")
-        windows.append(
-            build_window(
-                window_id,
-                window_label(window_id),
-                used,
-                window.get("remaining_percent"),
-                window.get("reset_at"),
-                window.get("used_dollars"),
-                window.get("limit_dollars"),
-                window_id == binding_id,
-                model=False,
-                window_seconds=window.get("window_seconds"),
-                projection=build_projection(window.get("projection")),
-            )
-        )
-
-    # Claude's model-scoped weeklies arrive with neither a span nor a
-    # projection, so they get neither here. Inferring "these ride the weekly
-    # window" is deliberately left to the client, which marks a reading derived
-    # that way as inferred; doing it here would launder a guess into a field
-    # that otherwise only ever carries what the provider stated.
-    for model in provider.get("models") or []:
-        if not isinstance(model, dict):
-            continue
-        model_id = model.get("model", "")
-        remaining = model.get("remaining_percent")
-        used = None if remaining is None else 100 - remaining
-        windows.append(
-            build_window(
-                model_id,
-                model.get("model_name") or model_id,
-                used,
-                remaining,
-                model.get("reset_at"),
-                None,
-                None,
-                False,
-                model=True,
-            )
-        )
-
-    error = provider.get("error")
+    last_error = upstream.get("last_error")
     return {
         "key": key,
         "prefix": provider_prefix(key),
         "name": provider_name(key),
-        "status": provider.get("status", ""),
-        "supported": bool(provider.get("supported", False)),
-        "credentialState": provider.get("credential_state", ""),
-        "error": error if isinstance(error, dict) else None,
-        "bindingWindowId": binding_id,
+        "status": "",
+        "supported": True,
+        "credentialState": "",
+        # The tooltip reads `error.message`.
+        "error": {"message": str(last_error)} if last_error else None,
+        "bindingWindowId": "",
         "windows": windows,
     }
 
 
-def build_record(payload):
-    """Turn the plugin's snapshot into (providers_list, tightest).
+def oldest_fetched_at_ms(upstreams):
+    """The `fetched_at` of the stalest window, so no reading is called fresher
+    than its oldest part. 0 when no window carries one."""
+    oldest = 0
+    for upstream in upstreams.values():
+        for window in ((upstream or {}).get("windows") or {}).values():
+            if not isinstance(window, dict):
+                continue
+            fetched = iso_to_ms(window.get("fetched_at"))
+            if fetched and (oldest == 0 or fetched < oldest):
+                oldest = fetched
+    return oldest
 
-    The pill shows the single tightest window across every provider and every
+
+def build_record(payload):
+    """Turn Sextant's quota body into (providers_list, tightest).
+
+    The pill shows the single tightest window across every upstream and every
     window: the one with the highest used percent. Because percent semantics
-    are identical across providers, that is a pure numeric comparison — the
+    are identical across upstreams, that is a pure numeric comparison — the
     client needs no provider knowledge to pick it.
     """
-    providers_map = payload.get("providers") or {}
+    upstreams = payload.get("upstreams")
+    if not isinstance(upstreams, dict):
+        raise ValueError("no upstreams map")
     providers_list = []
-    best = None  # (used_percent, provider_key, prefix, window_id, reset_at_ms)
-    for key in sorted(providers_map.keys()):
-        provider = providers_map[key] or {}
-        entry = parse_provider(key, provider)
+    best = None  # (used_percent, provider_key, prefix, window_id, reset_at_ms, stale)
+    for key in sorted(upstreams.keys()):
+        upstream = upstreams[key] or {}
+        entry = parse_provider(key, upstream)
         providers_list.append(entry)
         for window in entry["windows"]:
             used = window["usedPercent"]
             if used is None:
                 continue
             if best is None or used > best[0]:
-                best = (used, key, provider_prefix(key), window["id"], window["resetAtMs"])
+                best = (used, key, provider_prefix(key), window["id"], window["resetAtMs"], window["stale"])
 
     tightest = None
     if best is not None:
@@ -382,11 +328,12 @@ def build_record(payload):
             "prefix": best[2],
             "windowId": best[3],
             "resetAtMs": best[4],
+            "stale": best[5],
         }
     return providers_list, tightest
 
 
-def fetch_quota(key):
+def fetch_quota():
     cache_path = os.path.join(cache_dir(), "quota.json")
     cached = read_json(cache_path) or {}
 
@@ -395,8 +342,7 @@ def fetch_quota(key):
 
         A quota window is 5 hours or 7 days wide, so a reading from twenty
         minutes ago is still substantially true, whereas an empty pill says
-        nothing and invites a manual check that costs another rate-limited
-        request. The record carries the age so the widget can dim itself.
+        nothing. The record carries the age so the widget can dim itself.
         """
         if cached.get("providers") is not None:
             return {
@@ -410,17 +356,6 @@ def fetch_quota(key):
             }
         return {"ok": False, "stale": False, "error": error, "fetchedAtMs": 0, "generatedAtMs": 0, "providers": [], "tightest": None}
 
-    if not key:
-        return stale_result("No CPAMP admin key in kwallet (%s/%s)" % (WALLET_FOLDER, WALLET_ENTRY))
-
-    # A 429 names the moment it is willing to talk again. Honouring it is not
-    # politeness — ignoring it extends the penalty and keeps the widget dark for
-    # longer than the provider asked for.
-    backoff_until = cached.get("backoffUntilMs", 0)
-    if not FORCE and backoff_until > now_ms():
-        remaining = int((backoff_until - now_ms()) / 1000)
-        return stale_result("Rate limited; retrying in %ds" % remaining)
-
     age = (now_ms() - cached.get("fetchedAtMs", 0)) / 1000
     if not FORCE and cached.get("providers") is not None and age < QUOTA_TTL_SECONDS:
         return {
@@ -433,65 +368,75 @@ def fetch_quota(key):
             "tightest": cached.get("tightest"),
         }
 
-    url = BASE_URL.rstrip("/") + QUOTA_ROUTE
     if FORCE:
-        url += "?refresh=true"
-    payload, error, retry_after = request_json(url, key)
+        payload, error = request_json(BASE_URL.rstrip("/") + REFRESH_ROUTE, method="POST")
+    else:
+        payload, error = request_json(BASE_URL.rstrip("/") + QUOTA_ROUTE)
     if error:
-        if retry_after:
-            cached["backoffUntilMs"] = now_ms() + retry_after * 1000
-            write_json(cache_path, cached)
         return stale_result(error)
 
     try:
         providers_list, tightest = build_record(payload)
+        generated_at = oldest_fetched_at_ms(payload["upstreams"])
     except Exception as exc:
         return stale_result("Couldn't parse quota response: %s" % exc)
 
     # Two different clocks, and the difference is the point. `fetchedAtMs` is
-    # when THIS client last spoke to CPAMP; `generatedAtMs` is when the plugin
-    # last spoke to the providers. They diverge by up to the plugin's own
-    # cache-ttl, so reporting only the first would call a half-hour-old reading
+    # when THIS client last spoke to Sextant; `generatedAtMs` is when Sextant
+    # last spoke to the upstreams. They diverge by up to Sextant's poll
+    # interval, so reporting only the first would call a half-hour-old reading
     # fresh just because the local fetch was recent.
     record = {
         "ok": True,
         "stale": False,
         "error": "",
         "fetchedAtMs": now_ms(),
-        "generatedAtMs": iso_to_ms(payload.get("generated_at")),
+        "generatedAtMs": generated_at,
         "providers": providers_list,
         "tightest": tightest,
-        "backoffUntilMs": 0,
     }
     write_json(cache_path, record)
     return record
 
 
-def fetch_usage(key):
-    """Today's activity from CPAMP's local store. Never touches a provider."""
+def fetch_usage():
+    """Today's activity from Sextant's copy of the Gateway log. Never touches
+    an upstream."""
     cache_path = os.path.join(cache_dir(), "usage.json")
     cached = read_json(cache_path) or {}
+
+    # "Today" is defined by an explicit local-midnight boundary rather than by
+    # assuming the server's timezone matches this machine's.
+    midnight = dt.datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
+    since_ms = int(midnight.timestamp() * 1000)
+
+    # Yesterday's totals are not a stale reading of today, they are a wrong
+    # one, so a cache from before midnight is never served.
+    if cached.get("sinceMs") != since_ms:
+        cached = {}
 
     age = (now_ms() - cached.get("fetchedAtMs", 0)) / 1000
     if not FORCE and cached.get("today") and age < USAGE_TTL_SECONDS:
         return cached
 
-    if not key:
-        return cached
-
-    # The dashboard defines "today" by an explicit local-midnight boundary
-    # rather than assuming the server's timezone matches this machine's.
-    midnight = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    url = "%s/v0/management/dashboard/summary?today_start_ms=%d" % (
+    url = "%s%s?since=%s" % (
         BASE_URL.rstrip("/"),
-        int(midnight.timestamp() * 1000),
+        USAGE_ROUTE,
+        urllib.parse.quote(midnight.isoformat()),
     )
-    payload, error, _ = request_json(url, key)
-    if error or not isinstance(payload, dict):
+    payload, error = request_json(url)
+    if error:
         return cached
 
-    today = payload.get("today") or {}
-    rolling = payload.get("rolling_30m") or {}
+    # A failing Gateway copy still answers, with whatever it stored before it
+    # broke. Those totals undercount, so the last complete reading is kept
+    # instead — unless there is none, where an undercount beats nothing.
+    bifrost = (payload.get("sources") or {}).get("bifrost") or {}
+    if bifrost.get("last_error") and cached.get("today"):
+        return cached
+
+    totals = payload.get("totals") or {}
+    rolling = payload.get("last_30m") or {}
 
     # Cache hit rate, over prompt tokens only.
     #
@@ -506,31 +451,30 @@ def fetch_usage(key):
     # tokens were paid for at full rate on this request, and folding them into
     # the numerator would report a cache that had never once been read from as
     # a hit.
-    input_tokens = today.get("input_tokens", 0) or 0
-    cache_read = today.get("cache_read_tokens", 0) or 0
+    input_tokens = totals.get("input_tokens", 0) or 0
+    cache_read = totals.get("cache_read_tokens", 0) or 0
     cache_hit_rate = round(100.0 * cache_read / input_tokens, 1) if input_tokens > 0 else -1
 
     record = {
         "fetchedAtMs": now_ms(),
+        "sinceMs": since_ms,
         "today": {
-            "calls": today.get("total_calls", 0),
-            "failures": today.get("failure_calls", 0),
-            "tokens": today.get("total_tokens", 0),
+            "calls": totals.get("calls", 0),
+            "failures": totals.get("failures", 0),
+            "tokens": totals.get("total_tokens", 0),
             "inputTokens": input_tokens,
             "cacheReadTokens": cache_read,
-            "cacheCreationTokens": today.get("cache_creation_tokens", 0),
+            "cacheCreationTokens": totals.get("cache_write_tokens", 0),
             # -1, not 0, when there is nothing to divide by: a fresh day with no
             # requests has no hit rate, and showing "0%" would read as a
             # catastrophically cold cache rather than as an absent measurement.
             "cacheHitRate": cache_hit_rate,
-            # Deliberately carried as-is. CPAMP reports 0 when model prices have
-            # not been synced, and a rendered "$0.00" would be a fabrication;
-            # the widget shows cost only when this is non-zero.
-            "cost": today.get("total_cost", 0),
+            # Sextant stores no cost. Kept in the record shape; nothing shows it.
+            "cost": 0,
         },
         "rolling30m": {
-            "rpm": round(rolling.get("rpm", 0), 1),
-            "tpm": int(rolling.get("tpm", 0)),
+            "rpm": round(rolling.get("rpm", 0) or 0, 1),
+            "tpm": int(rolling.get("tpm", 0) or 0),
         },
         "topModels": [
             {
@@ -538,7 +482,7 @@ def fetch_usage(key):
                 "calls": entry.get("calls", 0),
                 "tokens": entry.get("tokens", 0),
             }
-            for entry in (payload.get("top_models_today") or [])[:3]
+            for entry in (payload.get("top_models") or [])[:3]
         ],
     }
     write_json(cache_path, record)
@@ -546,20 +490,19 @@ def fetch_usage(key):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Print multi-provider AI quota and CPAMP activity as one JSON record.")
+    parser = argparse.ArgumentParser(description="Print multi-provider AI quota and activity from Sextant as one JSON record.")
     parser.add_argument(
         "--force",
         action="store_true",
-        help="ignore caches and backoff; a person asking for fresh numbers overrules the reuse window",
+        help="ignore caches and ask Sextant to re-poll; a person asking for fresh numbers overrules the reuse window",
     )
     args = parser.parse_args()
 
     global FORCE
     FORCE = args.force
 
-    key = admin_key()
-    quota = fetch_quota(key)
-    usage = fetch_usage(key)
+    quota = fetch_quota()
+    usage = fetch_usage()
 
     record = {
         "ok": quota.get("ok", False),

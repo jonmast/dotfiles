@@ -3,17 +3,16 @@ import Quickshell
 import Quickshell.Io
 import qs.Common
 
-// Multi-provider AI quota and CPAMP activity, following the existing pill idiom
+// Multi-provider AI quota and activity, following the existing pill idiom
 // (see DwtWidget for the same Process-on-a-Timer shape).
 //
-// All fetching, caching, key handling and provider parsing live in `ai-quota`
+// All fetching, caching and wire-format parsing live in `ai-quota`
 // (nix/home/scripts/ai-quota.py). This file renders a record and nothing else.
-// The quota half of that record is one read-only GET against the
-// cpa-quota-api-extension plugin's quota route, which returns a normalized,
-// provider-nested snapshot. A widget that fetched for itself would have to own
-// a backoff policy, and every side-by-side dev instance
-// (`quickshell -p ./nix/home/quickshell`) would run a second copy of it against
-// the same rate limit.
+// The quota half of that record is one read-only GET against Sextant's
+// `/v1/quota`, which returns what Sextant last polled from each upstream. A
+// widget that fetched for itself would duplicate the stale-cache fallback, and
+// every side-by-side dev instance (`quickshell -p ./nix/home/quickshell`) would
+// run a second copy of it.
 //
 // Because the script serves from cache, polling here is cheap and is NOT the
 // upstream request rate: this timer reads a file, and the script decides when a
@@ -24,7 +23,9 @@ Item {
     property var record: null
 
     readonly property var tightest: record && record.tightest ? record.tightest : null
-    readonly property bool stale: record ? record.stale === true : false
+    // Either the collector served its cache, or Sextant itself has stopped
+    // hearing from the upstream behind the window the pill shows.
+    readonly property bool stale: record ? record.stale === true || (tightest !== null && tightest.stale === true) : false
     readonly property bool ok: record ? record.ok === true : false
 
     // Ticks the reset countdowns in the panel. Only runs while the panel is
@@ -89,8 +90,7 @@ Item {
 
     // A malformed record means the script is mid-write or missing. Keep whatever
     // is on screen: the previous reading is still the best answer available, and
-    // blanking the pill would invite a manual check that costs a rate-limited
-    // request.
+    // blanking the pill would invite a pointless manual refresh.
     function applyRecord(text) {
         try {
             root.record = JSON.parse(text);
@@ -99,8 +99,8 @@ Item {
 
     // Two processes rather than one with a mutable `command`: reassigning the
     // command of a Process around `running` races the launch, and the forced
-    // refresh is the one path that can deliberately spend a rate-limited
-    // request — it must not be able to fire the wrong argv.
+    // refresh is the one path that makes Sextant re-poll the upstreams — it
+    // must not be able to fire the wrong argv.
     Process {
         id: fetch
 

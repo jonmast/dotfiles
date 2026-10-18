@@ -7,19 +7,12 @@ let
   # `python3 nix/home/scripts/ai-quota.py | jq` is the whole debugging story,
   # and it needs no rebuild.
   #
-  # Stdlib only, like omarchy's collectors. The dependency surface is therefore
-  # just the interpreter plus kwallet-query for the admin key, which matters
-  # because this runs every minute from the bar.
+  # Stdlib only, like omarchy's collectors, and Sextant needs no credentials,
+  # so the dependency surface is just the interpreter. That matters because
+  # this runs every minute from the bar.
   ai-quota = pkgs.writeShellApplication {
     name = "ai-quota";
-    runtimeInputs = [
-      pkgs.python3
-      # Provides kwallet-query. The key lives in kdewallet under cpamp/admin-key
-      # and is never written to the store, the environment, or the process
-      # table — the wallet is already unlocked at login by kwallet-pam
-      # (CONTEXT.md, "KDE infra").
-      pkgs.kdePackages.kwallet
-    ];
+    runtimeInputs = [ pkgs.python3 ];
     text = ''
       exec python3 ${./scripts/ai-quota.py} "$@"
     '';

@@ -60,18 +60,18 @@ Column {
     // Outermost = longest window, by the window's LENGTH — not by how long is
     // left of it.
     //
-    // Those are not interchangeable, and using the second was a bug: OpenCode Go
-    // ships `monthly` without a `windowSeconds`, so it fell back to its reset
+    // Those are not interchangeable, and using the second was a bug: a
+    // `monthly` without a `windowSeconds` fell back to its reset
     // distance, and a month with 5 days left sorted below a 7-day weekly. The
     // card led with Weekly instead of Monthly. Worse, it was not even a stable
     // wrong answer — the remaining time shrinks toward zero as the reset nears,
     // so the default window silently changed partway through every month.
     //
     // `Pace.durationOf` already owns this inference (calendar months measured
-    // back from their reset date, Claude's scoped weeklies mapped onto the
-    // weekly span), so ordering asks it rather than keeping a second, worse copy
-    // of the same reasoning. Reset distance survives only as a last resort, for
-    // a window with neither a declared span nor a known id.
+    // back from their reset date, per-model windows like `7d_fable` mapped
+    // onto the span they subdivide), so ordering asks it rather than keeping a
+    // second, worse copy of the same reasoning. Reset distance survives only as
+    // a last resort, for a window with neither a declared span nor a known id.
     function orderedWindows(provider) {
         const windows = (provider.windows || []).slice();
         function span(w) {
@@ -84,7 +84,7 @@ Column {
             const delta = span(b) - span(a);
             if (delta !== 0)
                 return delta;
-            // Ties go to the containing window. Claude's model-scoped weeklies
+            // Ties go to the containing window. Per-model weeklies
             // have the same span as the account weekly that contains them, and
             // defaulting the ring to "Fable" rather than "Weekly (7d)" would
             // lead with a subdivision instead of the whole.
@@ -139,7 +139,7 @@ Column {
 
                 readonly property var selected: card.readings.length > 0 ? card.readings[Math.min(card.selectedIndex, card.readings.length - 1)] : null
 
-                // The provider's worst window by the plugin's own verdict. Only
+                // The provider's worst window by Sextant's own verdict. Only
                 // drives the alarm treatment, never the ring — see the note at
                 // the top of the file.
                 readonly property var lead: {
@@ -463,7 +463,7 @@ Column {
                                 x: 11
                                 width: parent.width - 11 - 62
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: legend.modelData.window.label
+                                text: legend.modelData.window.label + (legend.modelData.window.stale === true ? " (stale)" : "")
                                 color: legend.active ? Theme.foreground : Theme.notifForeground
                                 opacity: legend.active ? 1.0 : 0.6
                                 font.pixelSize: 10
@@ -494,7 +494,7 @@ Column {
                         }
                     }
 
-                    // Said once per card, not once per band: when the plugin
+                    // Said once per card, not once per band: when Sextant
                     // had no profile to work from, every forecast on the card
                     // is clock-only and should be read as provisional.
                     Text {
@@ -669,14 +669,14 @@ Column {
         }
     }
 
-    // The one gesture in the shell that deliberately spends a rate-limited
-    // upstream request, and the age of what it would replace — stated together,
+    // The one gesture in the shell that asks Sextant to re-poll the upstreams,
+    // and the age of what it would replace — stated together,
     // because "refresh" is only a meaningful offer next to how stale the thing
     // being refreshed is.
     //
-    // The age shown is the SERVER's, not this client's. The plugin holds its own
-    // cache and only calls the providers on a miss, so the moment the local
-    // fetch happened says nothing about how old the numbers are.
+    // The age shown is the SERVER's, not this client's. Sextant polls the
+    // upstreams on its own schedule, so the moment the local fetch happened
+    // says nothing about how old the numbers are.
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: {
