@@ -181,6 +181,11 @@ Item {
         onTapped: root.panelOpen = !root.panelOpen
     }
 
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: forceFetch.running = true
+    }
+
     Popout {
         id: popout
 

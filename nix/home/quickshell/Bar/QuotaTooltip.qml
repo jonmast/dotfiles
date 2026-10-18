@@ -681,7 +681,7 @@ Column {
         anchors.horizontalCenter: parent.horizontalCenter
         text: {
             const age = root.record ? root.host.formatAge(root.record.generatedAtMs) : "";
-            return age ? "click the bar to refresh · updated " + age : "click the bar to refresh";
+            return age ? "right-click the bar to refresh · updated " + age : "right-click the bar to refresh";
         }
         color: Theme.notifForeground
         opacity: 0.45
