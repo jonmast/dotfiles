@@ -7,7 +7,7 @@ source "$(dirname "$0")/api.sh"
 sid=$1 tier=$2
 case $tier in low | medium | high | xhigh) ;; *) echo "pin.sh: unknown tier '$tier'" >&2; exit 2 ;; esac
 
-model=$(jq -nc --arg v "$tier" '{providerID: "cliproxyapi-anthropic", id: "claude-opus-5-5", variant: $v}')
+model=$(jq -nc --arg v "$tier" '{providerID: "bifrost-claude", id: "claude-opus-5-5", variant: $v}')
 api post "/api/session/$sid/model" --data "{\"model\":$model}" >/dev/null
 
 got=$(api get "/api/session/$sid" | jq -c '.data.model')

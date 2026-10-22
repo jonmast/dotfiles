@@ -25,7 +25,8 @@ Drive workers through the scripts in `~/.agents/skills/herdr-impl/scripts/`, run
 | `report.sh <session>` | Prints the worker's latest reply |
 | `reply.sh <session> <request-id> once\|always\|reject [message]` | Answers one permission request |
 | `pin.sh <session> <tier>` | Moves a worker to a tier and verifies it |
-| `land.sh --branch <branch> --workspace <id> --verify '<cmd>' [--teardown '<cmd>']` | Fast-forwards, verifies, frees the worktree, each step gated on the last; prints one JSON line |
+| `land.sh --branch <branch>` | Fast-forwards the integration branch onto the branch; prints one JSON line with the landed `range` |
+| `verify.sh --branch <branch> --workspace <id> --range <range> --verify '<cmd>' [--teardown '<cmd>']` | Verifies a landing (rolling it back on failure), runs the teardown inside the worktree, frees it, each step gated on the last; prints one JSON line |
 | `render.ts <template> key=value... > <file>` | Fills a prompt template from `../templates/`; `key=@file` reads a value from a file; `--keys <template>` lists its keys |
 
 Every prompt you send, and the gather brief, is a template. Render it into `prompts/` and send the file; never read a template or a rendered prompt. `render.ts` fails on an unknown or missing key, so its exit status is your check.
@@ -96,7 +97,7 @@ Prompt it with the `reviewer` template: `spec` and `epic=1` for an epic review, 
 
 ### 1. Gather the tickets
 
-Gather through a subagent, so ticket bodies stay out of your context. Render the `gather` template to `prompts/gather.md` and tell the subagent to read and follow that file. It writes each ticket's body to `tickets/<NN>.md` and returns a table (per ticket: ID, title, blockers, **epic**, size, and what it creates or changes) and the project's **profile**: **verify** (the commands that prove the integration branch healthy after a landing), **services** (what a worker needs running, and how each gets its own copy), and **teardown** (what frees a worker's copies once it lands).
+Gather through a `standard` subagent, so ticket bodies stay out of your context. Render the `gather` template to `prompts/gather.md` and tell the subagent to read and follow that file. It writes each ticket's body to `tickets/<NN>.md` and returns a table (per ticket: ID, title, blockers, **epic**, size, and what it creates or changes) and the project's **profile**: **verify** (the commands that prove the integration branch healthy after a landing), **services** (what a worker needs running, and how each gets its own copy), **teardown** (the repo command, run inside a landing worker's worktree, that frees its copies), and **prune** (the repo command that frees copies whose checkout is gone, if any). Both come from the repo, so you never hold a copy's name; when the repo has neither, propose adding them before the gate.
 
 From its table, choose each ticket's tier, and find the **overlaps**: two tickets that could run at once and that create or change the same thing. Resolve each one:
 
@@ -174,23 +175,34 @@ If the opencode server restarts, every wait dies with it. Re-arm a background wa
 
 Tell the user one line per event. Give a full status only when they ask, or when you need them.
 
-Repeat until no ticket or epic review is left to spawn and no worker is running.
+Repeat until no ticket or epic review is left to spawn, no worker is running, and no verify is running.
 
 #### Landing
 
-The queue lands one worker at a time, so each rebases onto a tip that holds still. Rework finishes before a worker joins the queue, so a landing turn is only a rebase and tests. Give the head of the queue its turn by sending it the `landing` template: it rebases onto the tip, resolves conflicts so both sides' behaviour survives, runs the full suite, and reports each conflict's resolution, the test result, and any resolution it is unsure of.
+The queue lands one worker at a time, so each rebases onto a tip that holds still. Rework finishes before a worker joins the queue, so a landing turn is only a rebase and checks. A landing has two phases: the **merge**, which takes seconds, and the **verify**, which runs the full suite in the background. The next worker rebases onto a merged tip while the verify runs, but nothing merges until it passes, so a failure rolls back cleanly. A ticket counts as landed once its verify passes.
 
-Queued workers behind the head may get the landing prompt early, cap permitting, so most of their rebase is done before their turn; at their turn, they catch up on whatever landed since.
+Give the head of the queue its turn by sending it the `landing` template with `final=1`: it rebases onto the tip, resolves conflicts so both sides' behaviour survives, and runs static checks and the tests covering both sides and any conflict. It reports each conflict's resolution, what it ran and the result, and any resolution it is unsure of. The full suite is the verify's job, on the same commit, so the worker doesn't run it too.
 
-When it reports, check `git log <integration branch>..<branch>` shows only its commits. Tests passing with no unsure resolution means land it, from the main checkout, with the profile's verify and teardown:
+The next one or two workers behind the head may get the `landing` template early, with `early=1`, cap permitting, so most of their rebase is done before their turn: it rebases and runs static checks only. At their turn, with `final=1`, they catch up on whatever landed since and test. Hold the rest of the queue: a worker further back rebases once per landing ahead of it.
+
+When the head reports, check `git log <integration branch>..<branch>` shows only its commits. Tests passing with no unsure resolution, and no verify running, means merge it from the main checkout:
 
 ```bash
-land.sh --branch <branch> --workspace <id> --verify '<verify>' --teardown '<teardown>'
+land.sh --branch <branch>
 ```
 
-- `landed: true`: record its range, `<commit>~<commits>..<commit>`, in `state.md`, and mark the ticket done in the tracker, if it records status. Recompute the frontier, spawn each newly unblocked ticket (step 3), spawn each epic review that is now due (see Reviews), and give the next worker in the queue its turn.
+- `landed: true`: record its `range` in `state.md`. Start its verify with the harness's background mode, from the main checkout, with the profile's verify and teardown, then give the next worker in the queue its `final=1` turn without waiting:
+
+  ```bash
+  verify.sh --branch <branch> --workspace <id> --range <range> --verify '<verify>' --teardown '<teardown>'
+  ```
+
 - `reason: "behind"`: the tip moved; give the same worker another turn.
-- `reason: "verify"`: the integration branch is rolled back and the worktree kept; send the tail to the worker.
+
+While a verify runs, leave the main checkout alone and hold the next merge, even when its worker reports ready. When the verify returns:
+
+- `verified: true`: the worktree is freed. Mark the ticket done in the tracker, if it records status. Recompute the frontier, spawn each newly unblocked ticket (step 3), spawn each epic review that is now due (see Reviews), and merge the next worker if it has reported.
+- `reason: "verify"`: the integration branch is rolled back and the worktree kept; send the tail to the worker, and put it back in the queue once it is fixed. A worker that already rebased onto the failed landing now fails the `git log` check; give it another `final=1` turn with `dropped=<range>`, so it rebases off it.
 
 An unsure resolution goes to the user before anything lands.
 
@@ -206,6 +218,6 @@ In merge mode the integration branch is already the result.
 
 In stack mode, the landed branches already form the line. Adopt them in landing order with `gh stack init --base <base> <first landed> ... <last landed>`, following `/gh-stack`. Then check out the base in the main checkout and delete the scratch integration branch.
 
-Stop the shared services you started.
+Stop the shared services you started, and run the profile's prune from the main checkout.
 
-Done when every ticket and review is landed, failed, or stranded with a reason, and no worker is still running. Report per ticket: branch, tier, outcome, and anything unverified; then per review, its open findings.
+Done when every ticket and review is landed, failed, or stranded with a reason, and no worker or verify is still running. Report per ticket: branch, tier, outcome, and anything unverified; then per review, its open findings.
