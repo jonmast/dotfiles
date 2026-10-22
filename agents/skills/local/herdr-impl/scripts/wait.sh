@@ -8,6 +8,10 @@
 #   {"state":"stalled","last":"<type>"}    nothing running, yet the turn never closed
 #   {"state":"timeout"}                    --timeout elapsed (exit 124)
 #
+# --once polls at most twice and prints the state as it stands, adding:
+#   {"state":"running"}                    a turn is in progress in its session tree
+#   {"state":"unclosed","last":"<type>"}   nothing running, yet the turn hasn't closed
+#
 # `herdr agent wait` reads the TUI, which shows idle while background subagents
 # still run. This reads the opencode API instead: the session and every
 # descendant must be inactive, the last message must be `idle`, and the inbox
@@ -16,15 +20,16 @@
 set -euo pipefail
 source "$(dirname "$0")/api.sh"
 
-usage() { echo "usage: wait.sh <session-id> [--interval SEC] [--timeout SEC] [--stall SEC]" >&2; exit 2; }
+usage() { echo "usage: wait.sh <session-id> [--interval SEC] [--timeout SEC] [--stall SEC] [--once]" >&2; exit 2; }
 [[ $# -ge 1 ]] || usage
 sid=$1; shift
-interval=5 timeout=0 stall=120
+interval=5 timeout=0 stall=120 once=0
 while [[ $# -gt 0 ]]; do
   case $1 in
     --interval) interval=$2; shift 2 ;;
     --timeout) timeout=$2; shift 2 ;;
     --stall) stall=$2; shift 2 ;;
+    --once) once=1; shift ;;
     *) usage ;;
   esac
 done
@@ -96,6 +101,10 @@ while :; do
     fi
   fi
 
+  if (( once )); then
+    (( busy )) && { echo '{"state":"running"}'; exit 0; }
+    (( calm )) || { jq -nc --arg l "$last" '{state: "unclosed", last: $l}'; exit 0; }
+  fi
   if (( timeout > 0 && SECONDS >= timeout )); then
     echo '{"state":"timeout"}'
     exit 124

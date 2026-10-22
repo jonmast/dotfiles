@@ -21,7 +21,8 @@ Drive workers through the scripts in `~/.agents/skills/herdr-impl/scripts/`, run
 | --- | --- |
 | `spawn.sh --name <name> --tier <tier> --branch <branch> --base <ref>` | Worktree, session pinned to the tier, TUI started; prints `session` and `workspace_id` |
 | `prompt.sh <session> < <file>` | Sends the file as the worker's next turn |
-| `wait.sh <session>` | Blocks until the worker **settles**; prints its state |
+| `wait.sh <session> [--timeout <sec>]` | Blocks until the worker **settles**; prints its state. `--timeout` bounds it and prints `timeout`, where the shell's `timeout` kills it silently |
+| `status.sh <session>` | Prints the worker's state now, settled or not |
 | `report.sh <session>` | Prints the worker's latest reply |
 | `reply.sh <session> <request-id> once\|always\|reject [message]` | Answers one permission request |
 | `pin.sh <session> <tier>` | Moves a worker to a tier and verifies it |
@@ -168,10 +169,11 @@ The reply is one of:
 - **Reports done**: verify. `git log <integration branch>..<branch>` shows its commits, and the report says `git status` is clean and marks every acceptance criterion met or unverified. Send any failed check back to the worker; a second failure of the same check is an escalation (see Tiers). Tell the user about each unverified criterion. A verified worker joins the **landing queue**.
 - **A reviewer reports done**: the report marks every finding fixed or open and says `git status` is clean. Record the open findings in `state.md` and tell the user each one. With commits, it joins the landing queue; with none, free its worktree with `herdr worktree remove --workspace <id>`.
 - **Reports landed**: see Landing.
+- **None of these**: the turn was cut off; send the `resume` template.
 
 A worker that cannot finish **strands** its dependents: hold them back and report them as stranded.
 
-If the opencode server restarts, every wait dies with it. Re-arm a background wait for every worker, and resume each one that settles `interrupted`.
+If the opencode server restarts, every wait dies with it. Run `status.sh` for every worker and handle each state as a settle; re-arm a background wait for each one not yet settled.
 
 Tell the user one line per event. Give a full status only when they ask, or when you need them.
 
