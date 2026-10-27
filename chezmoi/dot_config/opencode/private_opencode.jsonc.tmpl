@@ -1,38 +1,68 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "share": "disabled",
-  "small_model": "opencode-go/mimo-v2.5",
+  "small_model": "opencode-go/mimo-v2.6-flash",
   "subagent_depth": 3,
   "mcp": {
-    "sentry": {
-      "enabled": false,
-      "oauth": {},
-      "type": "remote",
-      "url": "https://mcp.sentry.dev/mcp"
-    },
-    "context7": {
-      "type": "remote",
-      "url": "https://mcp.context7.com/mcp",
-      "enabled": true,
-      "headers": {
-        "CONTEXT7_API_KEY": "{file:~/.config/secrets/opencode/context7-api-key}"
+    "servers": {
+      "sentry": {
+        "type": "remote",
+        "url": "https://mcp.sentry.dev/mcp",
+        "oauth": {},
+        "disabled": true
+      },
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {
+          "CONTEXT7_API_KEY": "{file:~/.config/secrets/opencode/context7-api-key}"
+        }
+      },
+      "mcp.syatt": {
+        "type": "remote",
+        "url": "https://mcp.syatt.io/mcp?codemode=search_and_execute",
+        "oauth": {}
+      },
+      // One server per project directory; every session in that directory
+      // shares it, and it runs one tool call at a time. Bound calls so a
+      // stuck one errors out instead of blocking the queue for 12h.
+      "chrome-devtools": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "chrome-devtools-mcp@1.11.0",
+          "--browser-url=http://127.0.0.1:9222",
+          "--no-usage-statistics",
+          "--no-performance-crux"
+        ],
+        "timeout": {
+          "execution": 60000
+        }
+      },
+      // Zen on the Mac, via RemoteForward 21082 in the Mac's ~/.ssh/config
+      "my-zen": {
+        "type": "remote",
+        "url": "http://127.0.0.1:21082/mcp"
       }
-    },
-    "mcp.syatt": {
-      "type": "remote",
-      "url": "https://mcp.syatt.io/mcp?codemode=search_and_execute",
-      "oauth": {}
     }
   },
   "permission": {
+    "external_directory": {
+      "{{ .chezmoi.homeDir }}/.agents/skills/*": "allow",
+      "{{ .chezmoi.homeDir }}/projects/vtex/ethel/*": "allow"
+    },
     "bash": {
+      // "*": "ask",
+      "cat *": "allow",
+      "sed *": "allow",
+      "echo *": "allow",
       "gt modify *": "ask",
       "git push *": "ask",
-      "acli *": "ask",
-      "acli jira workitem search *": "allow",
-      "acli jira workitem view *": "allow",
+      "acli *": "deny", // deprecated
       "jira *": "ask",
       "JIRA_READ_ONLY=1 jira *": "allow",
+      "jira config *": "allow",
       "jira schema *": "allow",
       // These are too broad
       // "jira * list *": "allow",
@@ -71,32 +101,38 @@
       }
     },
     "explore": {
-      "model": "cliproxyapi-opencode-go/deepseek-v4-flash",
+      "model": "opencode-bifrost-go/deepseek-v4.1-flash",
       "variant": "low"
     },
     "light": {
-      "model": "cliproxyapi-opencode-go/deepseek-v4-flash",
+      "model": "opencode-bifrost-go/deepseek-v4.1-flash",
       "mode": "subagent",
       "variant": "low",
       "description": "Fast, cheap subagent for simple mechanical work: renames, small edits, boilerplate, straightforward questions.",
+      "permission": {
+        "question": "deny",
+      }
     },
     "standard": {
-      "model": "cliproxyapi-opencode-go/deepseek-v4-flash",
+      "model": "opencode-bifrost-go/deepseek-v4.1-flash",
+      // "model": "opencode-bifrost-go/minimax-m3",
       "mode": "subagent",
       "variant": "max",
       "description": "Balanced subagent for typical coding tasks and moderate complexity.",
+      "permission": {
+        "question": "deny",
+      }
     },
     "reviewer": {
-      "description": "Reviews code for best practices and potential issues. Subagent has no tools, so pass diff/etc in prompt",
+      "description": "Reviews code for best practices and potential issues.",
       "mode": "subagent",
-      "model": "cliproxyapi-anthropic/claude-fable-5-1",
-      "prompt": "You are a code and architecture reviewer. Evaluate the code or plan for robustness, architectural quality, and project standards. You don't have access to many tools, if there is data you need stop and respond with a request for the missing data",
+      // "model": "bifrost-claude/claude-fable-5-1",
+      "model": "bifrost-claude/claude-opus-5-5",
+      "variant": "xhigh",
+      "prompt": "You are a code and architecture reviewer. Evaluate the code or plan for robustness, architectural quality, and project standards.",
       "permission": {
-        "*": "deny",
-        "read": "allow",
-        "bash": {
-          "git *": "allow"
-        }
+        "write": "deny",
+        "question": "deny",
       }
     }
   },
@@ -132,7 +168,9 @@
     // ]
   ],
   "plugins": [
-    "@jonmast/opencode-cliproxyapi",
+    "@jonmast/opencode-bifrost",
+    "@prevalentware/opencode-goal-plugin",
+    "{{ .chezmoi.homeDir }}/up-to-no-good/idle-compaction",
   ],
   "instructions": [
     "{{ .chezmoi.homeDir }}/.config/opencode/rules/*.md"

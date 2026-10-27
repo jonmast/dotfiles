@@ -120,6 +120,10 @@ if type direnv &> /dev/null; then
   eval "$(direnv hook zsh)"
 fi
 
+if type mise &> /dev/null; then
+  eval "$(mise activate zsh)"
+fi
+
 # Keybindings for history search
 bindkey '^[[A' history-substring-search-up
 bindkey '^[[B' history-substring-search-down

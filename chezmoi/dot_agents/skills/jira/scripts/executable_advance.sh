@@ -96,7 +96,7 @@ run_jira() {
   errfile=$(mktemp)
   while :; do
     set +e
-    JIRA_OUT=$(jira --output json "$@" 2>"$errfile")
+    JIRA_OUT=$(jira --json "$@" 2>"$errfile")
     rc=$?
     set -e
     [[ $rc -eq 6 && $attempt -lt 3 ]] || break
