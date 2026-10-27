@@ -12,8 +12,8 @@ Skills pulled from upstream repos, with local edits that survive updates. Manage
 A skill in `local/` with no entry in `sources.toml` is local-only and never updated.
 
 chezmoi still deploys some skills as plain folders from `chezmoi/dot_agents/skills/`: skills with no
-upstream (jira, using-qsv, ...) and the Shopify skills, which are frozen for now. Never manage
-the same skill in both places; `chezmoi apply` would replace its symlink with a plain folder.
+upstream (jira, using-qsv, ...). Never manage the same skill in both places; `chezmoi apply`
+would replace its symlink with a plain folder.
 
 This repo is public. Keep private skills out of `local/` and install them straight into
 `~/.agents/skills`, which `skills-sync` leaves alone.
