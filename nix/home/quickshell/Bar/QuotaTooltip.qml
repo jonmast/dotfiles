@@ -32,7 +32,10 @@ Column {
     required property var record
     required property double now
 
-    readonly property int cardWidth: 178
+    // Wide enough for a 5h legend row's label, its bare reset clock and the
+    // widest projection ("100% → 120%") on one line. Without the clock this
+    // was 178; the extra is all the reset column.
+    readonly property int cardWidth: 200
 
     // The width the content is actually built for: one row of provider cards,
     // not a single card. The hosting Popout sizes its panel from this — same
