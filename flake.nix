@@ -5,11 +5,6 @@
     # Specify the source of Home Manager and Nixpkgs.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    # Pin a known-good nixpkgs for orca-slicer. 2.3.2 in nixos-unstable
-    # is broken (graphical plates won't open):
-    # https://github.com/OrcaSlicer/OrcaSlicer/issues/13137
-    nixpkgs-orca.url = "github:nixos/nixpkgs/62efab0dada7d38f14f7147bdd6c350780e9af10";
-
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -60,7 +55,7 @@
 
   };
 
-  outputs = { self, nixpkgs, home-manager, nixpkgs-orca, nub, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, nub, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
@@ -132,17 +127,25 @@
           ./nix/nixos/diogenes.nix
           home-manager.nixosModules.home-manager
           {
-            # System-level overlay: pin orca-slicer to a known-good nixpkgs.
-            # 2.3.2 in nixos-unstable is broken (graphical plates won't open):
-            # https://github.com/OrcaSlicer/OrcaSlicer/issues/13137
-            # With useGlobalPkgs = true, home-manager shares this pkgs set, so
-            # the overlay reaches home.packages without a second nixpkgs eval.
+            # System-level overlay. With useGlobalPkgs = true, home-manager
+            # shares this pkgs set, so it reaches home.packages too.
             nixpkgs.overlays = [
-              (final: _prev: {
-                orca-slicer =
-                  (import nixpkgs-orca {
-                    inherit system;
-                  }).orca-slicer;
+              (final: prev: {
+                # Slicing segfaults in Mesa's native GL drivers while rendering
+                # plate thumbnails (Orca issues a draw with a NULL index
+                # pointer). Zink sidesteps it and stays hardware-accelerated.
+                # Drop once fixed: https://github.com/OrcaSlicer/OrcaSlicer/issues/14453
+                # Wrapped rather than overridden so the cached build is reused.
+                orca-slicer = final.symlinkJoin {
+                  name = "orca-slicer-${prev.orca-slicer.version}";
+                  paths = [ prev.orca-slicer ];
+                  nativeBuildInputs = [ final.makeWrapper ];
+                  postBuild = ''
+                    wrapProgram $out/bin/orca-slicer \
+                      --set MESA_LOADER_DRIVER_OVERRIDE zink
+                  '';
+                  inherit (prev.orca-slicer) meta version;
+                };
 
                 ocmonitor = final.callPackage ./nix/packages/ocmonitor { };
                 opencode2 = final.callPackage ./nix/packages/opencode2 { };
