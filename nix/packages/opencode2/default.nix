@@ -26,7 +26,9 @@
 # `metadata.github.sha` in the update API), one commit *before* the `release:`
 # commit the matching git tag points at.
 #
-# Bump:
+# Not in the system build: `opencode-update` (nix/home/opencode-update.nix)
+# installs this recipe with the latest npm version and hash substituted, so the
+# pin below only matters for `nix build .#opencode2`. Bumping it by hand:
 #   1. curl -fsSL https://registry.npmjs.org/@opencode/cli-linux-x64 | jq '."dist-tags".latest'
 #      (the opencode.ai/update/api/beta/cli/npm endpoint has gone stale)
 #   2. edit `version` below
@@ -36,11 +38,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "opencode2";
-  version = "2.0.28";
+  version = "2.2.0";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-${finalAttrs.version}.tgz";
-    hash = "sha256-dvhQW6r1aWXtKPMFt0xSa1TszRj+eMgWIaQJDMAmyfk=";
+    hash = "sha256-/jBGuGhy5iT2ImgFj0gBofHv/8GTEDqZiCOMiRuMoCg=";
   };
 
   nativeBuildInputs = [

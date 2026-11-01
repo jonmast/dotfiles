@@ -299,5 +299,8 @@ export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true
 # opencode
 export PATH="$HOME/.opencode/bin:$PATH"
 
+# opencode2, installed by `opencode-update` (not part of the system build)
+export PATH="${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles/opencode2/bin:$PATH"
+
 # Machine-local overrides (untracked, per-host)
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

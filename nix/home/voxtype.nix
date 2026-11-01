@@ -183,8 +183,8 @@ let
   # Corpus builder, kept separate from the harness above: different job
   # (sourcing text vs measuring transcription) and a different dependency.
   #
-  # `opencode2` is deliberately NOT in runtimeInputs: it comes from the
-  # upstream opencode flake (see the `opencode` input in flake.nix), and this
+  # `opencode2` is deliberately NOT in runtimeInputs: it is installed outside
+  # the system build by `opencode-update` (opencode-update.nix), and this
   # corpus builder only needs it on the caller's PATH — which
   # writeShellApplication leaves intact — rather than pinned into the wrapper's
   # closure.

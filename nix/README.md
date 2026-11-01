@@ -7,7 +7,7 @@ This flake is the source of truth for all declarative nix-managed config on Diog
 | Output                           | Activation                                     | Purpose                                                                                                                                                                                                        |
 | -------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `nixosConfigurations."diogenes"` | `sudo nixos-rebuild switch --flake .#diogenes` | Full NixOS system. Includes home-manager via `home-manager.nixosModules`, so this command also activates home-manager atomically in the same generation. **This is the only activation command for diogenes.** |
-| `packages.x86_64-linux.*`        | `nix build .#<name>`                           | Packages reachable by attr name. `ocmonitor`, `lazyskills` and `opencode2` are local derivations; `opencode2` repackages the upstream prebuilt npm tarball rather than building from source — see "Updating opencode2". All reach `home.packages` via the overlay in `flake.nix`. |
+| `packages.x86_64-linux.*`        | `nix build .#<name>`                           | Packages reachable by attr name. `ocmonitor`, `lazyskills` and `opencode2` are local derivations; `opencode2` repackages the upstream prebuilt npm tarball rather than building from source — see "Updating opencode2". All but `opencode2` reach `home.packages` via the overlay in `flake.nix`; `opencode2` is installed outside the system build by `opencode-update`. |
 
 There is no standalone `homeConfigurations` output. home-manager runs only as a NixOS module; a standalone `home-manager switch` would write to the same generation profile and be silently reverted by the next rebuild. If a non-NixOS host is ever added it gets its own output — see "Adding a new machine".
 
@@ -26,13 +26,15 @@ nix/
 │   ├── hyprland.nix            # hyprland compositor: wiring for The Shell (quickshell), hypridle/hyprlock, walker
 │   ├── voxtype.nix             # voice-to-text daemon: whisper weights, push-to-talk submaps, OSD, eval scripts
 │   ├── aiquota.nix             # ai-quota script for the Bar's AI quota pill
+│   ├── opencode-update.nix     # opencode-update: installs/updates opencode2 into its own profile, no rebuild
 │   ├── hypr/                   # hyprland config in Lua — core.lua, binds.lua; symlinked out-of-store (edits need no rebuild)
 │   ├── quickshell/             # The Shell — QML tree, symlinked out-of-store (edits need no rebuild)
-│   └── scripts/                # python helpers wrapped by voxtype.nix and aiquota.nix
+│   └── scripts/                # helper scripts wrapped by the home modules above
 ├── packages/                   # locally-defined derivations, exposed via overlay in flake.nix
 │   ├── lazyskills/
 │   ├── nix-search/
-│   └── ocmonitor/
+│   ├── ocmonitor/
+│   └── opencode2/
 └── patches/
     ├── README.md
     └── fractal-hover-reactions.patch   # applied via fractalPatched in nix/home/common.nix
@@ -70,8 +72,8 @@ systemctl --user restart quickshell
 # Reload hyprland after nix/home/hypr/*.lua edits (no rebuild needed)
 hyprctl reload
 
-# Bump opencode2 (see "Updating opencode2" below)
-curl -fsSL https://opencode.ai/update/api/beta/cli/npm
+# Update opencode2 to the latest npm release (no rebuild; see below)
+opencode-update
 
 # Check a hyprland config change without starting a session
 hyprland --verify-config -c ~/.config/hypr/hyprland.lua
@@ -85,11 +87,20 @@ The binary lives in `libexec`, and `bin/` holds two wrappers over it, `opencode`
 
 The wrapper exists for one reason: `@opentui/core` **dlopen**s `libwayland-client.so.0` for its clipboard backend. Nothing links it, so `autoPatchelf` cannot see it; without `LD_LIBRARY_PATH` the Wayland backend silently fails and pasting into the TUI is broken. Note this bug also affects a `curl | bash` install of opencode, which has no wrapper to fix it.
 
-Bumping is two steps:
+It is **not** in `home.packages`: upstream releases daily, and a rebuild per release is too much. `opencode-update` (`nix/home/opencode-update.nix`) reads the npm `latest` dist-tag, prefetches the tarball, and builds this recipe with `version` and `src.hash` substituted, against the same nixpkgs as the system. The result goes into its own profile, `~/.local/state/nix/profiles/opencode2`, whose `bin/` reaches PATH via `chezmoi/dot_zshrc.tmpl`, so only shells see it. Nothing started outside a shell (systemd units, Hyprland binds) can find opencode.
 
 ```bash
-# 1. Find the current version (this is also what install.sh reads):
-curl -fsSL https://opencode.ai/update/api/beta/cli/npm
+opencode-update             # install latest if newer
+opencode-update --check     # report installed vs latest
+opencode-update --rollback  # previous generation (the last 5 are kept)
+opencode-update --remove    # uninstall
+```
+
+The script builds against the recipe as of the last rebuild, not the working tree, so recipe edits need a rebuild to take effect. The `version`/`hash` pinned in the recipe only matter for `nix build .#opencode2`; bump them by hand if wanted:
+
+```bash
+# 1. Find the current version (the opencode.ai/update API endpoint has gone stale):
+curl -fsSL https://registry.npmjs.org/@opencode/cli-linux-x64 | jq -r '."dist-tags".latest'
 
 # 2. Edit `version` in nix/packages/opencode2/default.nix, then get the hash:
 nix store prefetch-file --json \

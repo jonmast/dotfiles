@@ -51,7 +51,6 @@ in
     nodejs
     nub
     ocmonitor
-    opencode2
     orca-slicer
     pi-coding-agent
     pv-migrate

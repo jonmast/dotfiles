@@ -10,6 +10,7 @@
     ./qmllint.nix
     ./voxtype.nix
     ./comma.nix
+    ./opencode-update.nix
   ];
 
   # Home Manager needs basic identity info.
