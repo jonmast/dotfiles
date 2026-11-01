@@ -7,7 +7,7 @@ This flake is the source of truth for all declarative nix-managed config on Diog
 | Output                           | Activation                                     | Purpose                                                                                                                                                                                                        |
 | -------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `nixosConfigurations."diogenes"` | `sudo nixos-rebuild switch --flake .#diogenes` | Full NixOS system. Includes home-manager via `home-manager.nixosModules`, so this command also activates home-manager atomically in the same generation. **This is the only activation command for diogenes.** |
-| `packages.x86_64-linux.*`        | `nix build .#<name>`                           | Packages reachable by attr name. `ocmonitor`, `lazyskills` and `opencode2` are local derivations; `opencode2` repackages the upstream prebuilt npm tarball rather than building from source — see "Updating opencode2". All but `opencode2` reach `home.packages` via the overlay in `flake.nix`; `opencode2` is installed outside the system build by `opencode-update`. |
+| `packages.x86_64-linux.*`        | `nix build .#<name>`                           | Packages reachable by attr name. `ocmonitor`, `lazyskills`, `opencode2` and `openchamber-desktop` are local derivations. `opencode2` and `openchamber-desktop` repackage upstream prebuilt artifacts rather than building from source — see "Updating opencode2" and "Updating openchamber-desktop". All but `opencode2` reach `home.packages` via the overlay in `flake.nix`; `opencode2` is installed outside the system build by `opencode-update`. |
 
 There is no standalone `homeConfigurations` output. home-manager runs only as a NixOS module; a standalone `home-manager switch` would write to the same generation profile and be silently reverted by the next rebuild. If a non-NixOS host is ever added it gets its own output — see "Adding a new machine".
 
@@ -34,6 +34,7 @@ nix/
 │   ├── lazyskills/
 │   ├── nix-search/
 │   ├── ocmonitor/
+│   ├── openchamber/
 │   └── opencode2/
 └── patches/
     ├── README.md
@@ -108,6 +109,25 @@ nix store prefetch-file --json \
 ```
 
 Paste the `hash` field into `src.hash`, then `nix flake check --no-build` and `nix build .#opencode2`. The npm `version` is the same number as the matching git tag, but the artifact is built one commit *earlier* — from the tip of `v2`, before the `release:` commit the tag points at.
+
+## Updating openchamber-desktop
+
+`openchamber-desktop` is `nix/packages/openchamber`: the upstream Linux AppImage, wrapped with `appimageTools.wrapType2` so its bundled OpenCode CLI (currently 2.0.32) and ripgrep run unpatched in an FHS environment. It has its own bundled CLI, independent of the installed `opencode2`; upstream pins the pair together, so bumping OpenChamber may also require a matching OpenCode release on their side.
+
+Bumping is two steps:
+
+```bash
+# 1. Find the current release:
+curl -fsSL https://api.github.com/repos/openchamber/openchamber/releases/latest | jq -r .tag_name
+
+# 2. Edit `version` in nix/packages/openchamber/default.nix, then get the hash:
+nix store prefetch-file --json \
+  https://github.com/openchamber/openchamber/releases/download/v<version>/OpenChamber-<version>-linux-x86_64.AppImage
+```
+
+Paste the `hash` field into `src.hash`, then `nix flake check --no-build` and `nix build .#openchamber-desktop`.
+
+The app's in-app updater cannot work from the read-only store; it reports that updates require a packaged AppImage/.deb/.rpm. Bump it here and rebuild instead.
 
 ## Dotfiles vs nix
 

@@ -64,6 +64,7 @@
       packages.${system} = {
         ocmonitor = pkgs.callPackage ./nix/packages/ocmonitor { };
         opencode2 = pkgs.callPackage ./nix/packages/opencode2 { };
+        openchamber-desktop = pkgs.callPackage ./nix/packages/openchamber { };
         lazyskills = pkgs.callPackage ./nix/packages/lazyskills { };
         default = self.packages.${system}.ocmonitor;
       };
@@ -149,6 +150,7 @@
 
                 ocmonitor = final.callPackage ./nix/packages/ocmonitor { };
                 opencode2 = final.callPackage ./nix/packages/opencode2 { };
+                openchamber-desktop = final.callPackage ./nix/packages/openchamber { };
                 lazyskills = final.callPackage ./nix/packages/lazyskills { };
                 nix-search = final.callPackage ./nix/packages/nix-search { };
                 nub = nub.packages.${system}.default;
