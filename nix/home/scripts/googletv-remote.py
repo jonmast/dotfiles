@@ -144,6 +144,9 @@ LAUNCH_LINKS = {
     "com.disney.disneyplus": "https://www.disneyplus.com",
     "com.wbd.stream": "https://play.max.com",
     "com.peacocktv.peacockandroid": "https://www.peacocktv.com/deeplink",
+    # Documented by the TV ecosystem, not yet exercised on this streamer: if
+    # the TV refuses it, the fallback is the app's own scheme, `netflix://`.
+    "com.netflix.ninja": "https://www.netflix.com/title",
 }
 
 RETRY_MIN = 2
