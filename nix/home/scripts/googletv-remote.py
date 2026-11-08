@@ -45,19 +45,26 @@ is the set, and it is asymmetric:
   off   a POWER key to the streamer. The streamer sleeps and sends a CEC
         standby the set obeys. This is why the old power toggle appeared to
         half-work.
-  on    a `launch` of the set's HDMI input over ECP. POWER cannot do this:
-        it only ever puts the streamer to sleep, never wakes it, so from
-        standby it is a no-op. Launching the input wakes the set AND brings
-        the streamer back via CEC, so one request restores both.
+  on    a WAKEUP key to the streamer over ADB (network debugging, port
+        5555). The streamer wakes and sends CEC One Touch Play, which powers
+        the set and selects its input. The remote protocol cannot do this: an
+        asleep streamer keeps that session up but ignores every key on it,
+        WAKEUP and POWER included. ADB does not ignore them, and it needs
+        nothing from the set, so the set can be kept off the network.
+        Fallback: a `launch` of the set's HDMI input over ECP, which wakes
+        the set AND brings the streamer back via CEC.
 
 The streamer also sleeps with the set, which is why `reconnecting` (or
-`unreachable`, if we started after the TV went off) is the RESTING state of
-an off TV rather than a fault. Only `tv_powered` separates the two, and a
+`unreachable`, if we started after the TV went off) can be the RESTING state
+of an off TV rather than a fault. Only `tv_powered` separates the two, and a
 consumer that shows status without it will cry wolf every evening.
 
 `powered` is the streamer's own state and is NOT the set's — it reads true
 whenever the box is awake, including with the screen off. `tv_powered` is
-the set, polled from ECP, and is what a power control should show.
+the set, polled from ECP, and is what a power control should show. A set
+ECP cannot reach (off the network, or no `tv_host`) reports the streamer's
+`powered` instead: CEC sleeps and wakes the two together, so it is the best
+guess left, and wrong only when the set is switched off on its own remote.
 
 The app list, `apps`, is learned rather than configured. The protocol can say
 which app is in front but has no way to ask what is installed, and Roku's
@@ -83,7 +90,11 @@ Config is ~/.config/googletv/config.json:
 
 `tv_host` may be a name; it is resolved to an address before each request
 because Roku rejects a hostname in the Host header (403) as rebinding
-protection — see roku_url(). Omit `tv_host` and `power` is unavailable.
+protection — see roku_url(). Omit `tv_host` and `power on` has no fallback
+if ADB fails.
+
+ADB authenticates with ~/.android/adbkey; the streamer must have accepted
+it once (the "Allow USB debugging?" prompt) and have network debugging on.
 
 The client certificate the TV pairs against lives in ~/.local/state/googletv/,
 alongside the learned app list. Both paths honour XDG overrides. Delete the
@@ -98,6 +109,7 @@ import logging
 import os
 import re
 import socket
+import subprocess
 import sys
 import time
 import urllib.error
@@ -160,6 +172,9 @@ ROKU_TIMEOUT = 5
 # this script we cannot ask to tell us when it changes.
 TV_POLL = 10
 POWER_MODE = re.compile(r"<power-mode>([^<]*)</power-mode>")
+# The streamer, over ADB. Only used to wake it; see "two devices" above.
+ADB_PORT = 5555
+ADB_TIMEOUT = 10
 # The library puts no bound on the TCP connect; a wrong or dark address would
 # otherwise sit in "connecting" for the kernel's full SYN retry (minutes).
 CONNECT_TIMEOUT = 10
@@ -222,7 +237,7 @@ class Bridge:
                     "apps": self.apps,
                     "volume": self.volume,
                     "error": self.error,
-                    "tv_powered": self.tv_powered,
+                    "tv_powered": self.powered if self.tv_powered is None else self.tv_powered,
                 }
             ),
             flush=True,
@@ -391,6 +406,25 @@ class Bridge:
                         self.retry_wakeup.set()
             await asyncio.sleep(TV_POLL)
 
+    # ---- the streamer over ADB ----------------------------------------
+
+    def adb_wake(self) -> None:
+        # Resolved for the same reason as roku_url(): a DHCP change must not
+        # strand us, and adb keys its connections by the string we give it.
+        serial = f"{socket.gethostbyname(self.host)}:{ADB_PORT}"
+        # `adb connect` exits 0 even when it fails, so its output is the only
+        # verdict. Connecting to an already connected device is a no-op.
+        connect = subprocess.run(["adb", "connect", serial], capture_output=True, text=True, timeout=ADB_TIMEOUT)
+        if "connected to" not in connect.stdout:
+            raise OSError(f"adb connect: {(connect.stdout + connect.stderr).strip()}")
+        subprocess.run(
+            ["adb", "-s", serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP"],
+            capture_output=True,
+            text=True,
+            timeout=ADB_TIMEOUT,
+            check=True,
+        )
+
     # ---- commands -----------------------------------------------------
 
     async def cmd_host(self, addr: str) -> None:
@@ -499,19 +533,29 @@ class Bridge:
             await self.cmd_key("POWER")
             return
 
-        if not (self.tv_host and self.tv_input):
-            self.set(error="set tv_host and tv_input in config to power on")
+        if not self.host:
+            self.set(error="set a host first")
             return
         try:
-            await self.roku(f"launch/{self.tv_input}", method="POST")
-        except (OSError, urllib.error.URLError, socket.gaierror) as exc:
-            self.set(error=f"TV unreachable: {exc}")
-            return
+            await asyncio.to_thread(self.adb_wake)
+        except (OSError, subprocess.SubprocessError) as exc:
+            if not (self.tv_host and self.tv_input):
+                self.set(error=f"streamer did not wake over ADB: {exc}")
+                return
+            logging.warning("ADB wake failed, falling back to ECP: %s", exc)
+            try:
+                await self.roku(f"launch/{self.tv_input}", method="POST")
+            except (OSError, urllib.error.URLError, socket.gaierror) as exc:
+                self.set(error=f"TV unreachable: {exc}")
+                return
         if self.error:
             self.set(error="")
         # The set takes a few seconds to come up and the poll is slower than
         # that, so report the intent now; the poll corrects it if it failed.
-        self.set(tv_powered=True)
+        # Without a poll nothing would, and the streamer's own `powered`
+        # callback reports the wake soon enough.
+        if self.tv_host:
+            self.set(tv_powered=True)
 
     async def handle(self, line: str) -> None:
         verb, _, arg = line.strip().partition(" ")

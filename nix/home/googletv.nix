@@ -8,11 +8,14 @@ let
   #
   # androidtvremote2 speaks the Android TV Remote protocol v2 — the same one
   # the Google TV phone app uses — so no developer options or ADB on the TV,
-  # just a one-time PIN pairing from the widget's panel.
+  # just a one-time PIN pairing from the widget's panel. The exception is
+  # power-on: an asleep streamer ignores that protocol, so the wake goes over
+  # ADB and needs network debugging enabled on the streamer.
   googletv-remote = pkgs.writeShellApplication {
     name = "googletv-remote";
     runtimeInputs = [
       (pkgs.python3.withPackages (ps: [ ps.androidtvremote2 ]))
+      pkgs.android-tools
     ];
     text = ''
       exec python3 ${./scripts/googletv-remote.py} "$@"
