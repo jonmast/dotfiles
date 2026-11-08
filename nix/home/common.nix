@@ -30,6 +30,7 @@ in
     ghostty
     gh
     git
+    helium
     herdr
     htop
     jq

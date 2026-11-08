@@ -7,7 +7,7 @@ This flake is the source of truth for all declarative nix-managed config on Diog
 | Output                           | Activation                                     | Purpose                                                                                                                                                                                                        |
 | -------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `nixosConfigurations."diogenes"` | `sudo nixos-rebuild switch --flake .#diogenes` | Full NixOS system. Includes home-manager via `home-manager.nixosModules`, so this command also activates home-manager atomically in the same generation. **This is the only activation command for diogenes.** |
-| `packages.x86_64-linux.*`        | `nix build .#<name>`                           | Packages reachable by attr name. `ocmonitor`, `lazyskills`, `opencode2` and `openchamber-desktop` are local derivations. `opencode2` and `openchamber-desktop` repackage upstream prebuilt artifacts rather than building from source — see "Updating opencode2" and "Updating openchamber-desktop". All but `opencode2` reach `home.packages` via the overlay in `flake.nix`; `opencode2` is installed outside the system build by `opencode-update`. |
+| `packages.x86_64-linux.*`        | `nix build .#<name>`                           | Packages reachable by attr name. `ocmonitor`, `lazyskills`, `opencode2`, `openchamber-desktop` and `helium` are local derivations. `opencode2`, `openchamber-desktop` and `helium` repackage upstream prebuilt artifacts rather than building from source — see "Updating opencode2", "Updating openchamber-desktop" and "Updating helium". All but `opencode2` reach `home.packages` via the overlay in `flake.nix`; `opencode2` is installed outside the system build by `opencode-update`. |
 
 There is no standalone `homeConfigurations` output. home-manager runs only as a NixOS module; a standalone `home-manager switch` would write to the same generation profile and be silently reverted by the next rebuild. If a non-NixOS host is ever added it gets its own output — see "Adding a new machine".
 
@@ -31,6 +31,7 @@ nix/
 │   ├── quickshell/             # The Shell — QML tree, symlinked out-of-store (edits need no rebuild)
 │   └── scripts/                # helper scripts wrapped by the home modules above
 ├── packages/                   # locally-defined derivations, exposed via overlay in flake.nix
+│   ├── helium/
 │   ├── lazyskills/
 │   ├── nix-search/
 │   ├── ocmonitor/
@@ -128,6 +129,21 @@ nix store prefetch-file --json \
 Paste the `hash` field into `src.hash`, then `nix flake check --no-build` and `nix build .#openchamber-desktop`.
 
 The app's in-app updater cannot work from the read-only store; it reports that updates require a packaged AppImage/.deb/.rpm. Bump it here and rebuild instead.
+
+## Updating helium
+
+`helium` is `nix/packages/helium`: the upstream Linux AppImage of the [Helium browser](https://helium.computer), wrapped with `appimageTools.wrapType2`. It is not in nixpkgs, and building it from source is a full Chromium build. The in-app updater cannot write to the store; bump it here and rebuild:
+
+```bash
+# 1. Find the current release:
+curl -fsSL https://api.github.com/repos/imputnet/helium-linux/releases/latest | jq -r .tag_name
+
+# 2. Edit `version` in nix/packages/helium/default.nix, then get the hash:
+nix store prefetch-file --json \
+  https://github.com/imputnet/helium-linux/releases/download/<version>/helium-<version>-x86_64.AppImage
+```
+
+Paste the `hash` field into `src.hash`, then `nix flake check --no-build` and `nix build .#helium`.
 
 ## Dotfiles vs nix
 

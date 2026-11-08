@@ -54,6 +54,7 @@
         opencode2 = pkgs.callPackage ./nix/packages/opencode2 { };
         openchamber-desktop = pkgs.callPackage ./nix/packages/openchamber { };
         lazyskills = pkgs.callPackage ./nix/packages/lazyskills { };
+        helium = pkgs.callPackage ./nix/packages/helium { };
         default = self.packages.${system}.ocmonitor;
       };
 
@@ -140,6 +141,7 @@
                 opencode2 = final.callPackage ./nix/packages/opencode2 { };
                 openchamber-desktop = final.callPackage ./nix/packages/openchamber { };
                 lazyskills = final.callPackage ./nix/packages/lazyskills { };
+                helium = final.callPackage ./nix/packages/helium { };
                 nix-search = final.callPackage ./nix/packages/nix-search { };
                 nub = nub.packages.${system}.default;
               })
