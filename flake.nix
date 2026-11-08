@@ -10,23 +10,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Quickshell — the QtQuick desktop shell toolkit that hosts The Shell
-    # (nix/home/quickshell). Pinned to the upstream v0.3.1 tag rather than
-    # taken from nixpkgs: nixpkgs-unstable still ships 0.3.0, whose `kill`
-    # returns before the instance has actually exited. That race bites every
-    # shell restart (`systemctl --user restart quickshell` can land a new
-    # instance while the old one still holds the layer-shell surfaces).
-    # Upstream fixed it in 0.3.1; nixpkgs PR #554917 is the pending bump.
-    # Drop this input and switch to pkgs.quickshell once nixpkgs is >= 0.3.1.
-    #
-    # `inputs.nixpkgs.follows` is MANDATORY, not hygiene: quickshell links
-    # against private Qt APIs and must be built against the exact same Qt as
-    # the rest of the session, or it crashes at startup on ABI mismatch.
-    quickshell = {
-      url = "git+https://git.outfoxxed.me/outfoxxed/quickshell?ref=refs/tags/v0.3.1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # Nub — all-in-one Node.js toolkit (TypeScript runner, pnpm-compatible
     # package manager, Node version manager). Not yet in nixpkgs (PR #535802).
     nub = {
@@ -34,24 +17,27 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Voxtype — taken from upstream rather than nixpkgs for the `onnx` package.
-    # nixpkgs builds voxtype with no cargo features, so its Parakeet backend is
-    # absent: `--model parakeet-tdt-0.6b-v3` there logs "Unknown model", falls
-    # back to whisper base.en, and looks like it worked. This input is what
-    # makes engine = "parakeet" possible at all (nix/home/voxtype.nix).
-    #
-    # Costs a ~280-derivation source build on every rev bump, all of it small
-    # Rust crates: onnxruntime itself is a cached nixpkgs dependency, linked
-    # dynamically via the parakeet-load-dynamic feature rather than vendored.
-    voxtype = {
-      url = "github:peteonrails/voxtype/v1.0.1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # Voxtype comes from nixpkgs now (nix/home/voxtype.nix overrides it with
+    # `onnxSupport = true` to get the Parakeet backend). It used to be an input
+    # here because nixpkgs had no way to enable those cargo features; that
+    # option landed in nixpkgs with voxtype 1.1.1, so the upstream flake is
+    # gone. Same local build either way — the ONNX derivation is not
+    # cache-substituted.
 
     nix-index-database = {
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Frozen nixpkgs used only for fractal (nix/home/common.nix). Fractal is
+    # built via overrideAttrs to carry the hover-reactions patch, so it can
+    # never be substituted from the binary cache: every change to its
+    # derivation — even a nixpkgs bump that leaves the version at 14.1 — costs
+    # a full local Rust build. Pinning the app to the rev the machine was
+    # installed from lets `nix flake update` refresh everything else without
+    # touching that build. Bump this rev deliberately (and accept the
+    # recompile) only when fractal itself needs updating.
+    fractal-nixpkgs.url = "github:nixos/nixpkgs/c59305bab2065cfecc4944690d9eedbb56f3a9fa";
 
   };
 
@@ -59,6 +45,8 @@
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
+      # Separate package set for the patched fractal; see the input comment.
+      fractalPkgs = import inputs.fractal-nixpkgs { inherit system; };
     in
     {
       packages.${system} = {
@@ -160,7 +148,7 @@
             home-manager = {
               useGlobalPkgs = true;
               users.jon = { imports = [ ./nix/home/default.nix ]; };
-              extraSpecialArgs = { inherit inputs; };
+              extraSpecialArgs = { inherit inputs fractalPkgs; };
             };
           }
         ];

@@ -6,10 +6,15 @@ right-click context menu to a hover-revealed button in
 
 ## Status: **enabled** in `home/common.nix`
 
-`fractalPatched` (a `pkgs.fractal.overrideAttrs` in the `let` block at the
-top of `home/common.nix`) is what's in `home.packages`. The rebuild is slow;
-to fall back to stock, swap `fractalPatched` for `fractal` in the package
-list.
+`fractalPatched` (a `fractalPkgs.fractal.overrideAttrs` in the `let` block at
+the top of `home/common.nix`) is what's in `home.packages`. The rebuild is
+slow; to fall back to stock, swap `fractalPatched` for `fractal` in the
+package list.
+
+`fractalPkgs` is imported from the frozen `fractal-nixpkgs` flake input (see
+`flake.nix`), not from the main `pkgs`. Because the patch forces a local
+build, using the main nixpkgs would make every `nix flake update` recompile
+fractal; the frozen input keeps it bit-identical to the installed build.
 
 ## Regenerate
 
@@ -25,4 +30,4 @@ cp fractal-hover-reactions.patch ~/.dotfiles/nix/patches/
 ```
 
 The patched package is built in `home/common.nix` via
-`pkgs.fractal.overrideAttrs`.
+`fractalPkgs.fractal.overrideAttrs`.

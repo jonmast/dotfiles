@@ -1,4 +1,4 @@
-{ config, pkgs, lib, inputs, ... }:
+{ config, pkgs, lib, ... }:
 
 {
   # Hyprland ecosystem packages. These are only useful inside a Hyprland
@@ -225,10 +225,9 @@
 
   programs.quickshell = {
     enable = true;
-    # Pinned upstream v0.3.1, not pkgs.quickshell (still 0.3.0). See the
-    # `quickshell` input in flake.nix for why the pin exists and what has to
-    # be true before it can be dropped.
-    package = inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    # Must be >= 0.3.1: 0.3.0's `kill` returns before the instance has exited,
+    # so a restart can race the old instance for the layer-shell surfaces.
+    package = pkgs.quickshell;
     # The QML tree is deployed to ~/.config/quickshell/shell (ADR 0001: own
     # minimal shell, HM-deployed, nothing vendored from omarchy).
     # `activeConfig` makes the unit run `quickshell --config shell`.

@@ -1,7 +1,9 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, fractalPkgs, ... }:
 
 let
-  fractalPatched = pkgs.fractal.overrideAttrs (old: {
+  # Built from the frozen `fractal-nixpkgs` input, not `pkgs`: a nixpkgs bump
+  # would otherwise change this derivation and force a full local Rust build.
+  fractalPatched = fractalPkgs.fractal.overrideAttrs (old: {
     patches = old.patches ++ [ ../patches/fractal-hover-reactions.patch ];
   });
 in

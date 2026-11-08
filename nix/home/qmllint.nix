@@ -1,4 +1,4 @@
-{ pkgs, inputs, ... }:
+{ pkgs, config, ... }:
 
 let
   # `qs-lint` — qmllint, taught about The Shell. Same arrangement as
@@ -12,10 +12,10 @@ let
   #
   # Two module paths, both required:
   #   - quickshell's own, for PanelWindow, Process, Singleton and the rest.
-  #     Taken from the same pinned flake input hyprland.nix deploys, so the
-  #     linter and the running shell can never disagree about the API.
+  #     Taken from the same package hyprland.nix deploys, so the linter and
+  #     the running shell can never disagree about the API.
   #   - qtdeclarative's, for QtQuick itself. qmllint does not find it alone.
-  quickshell = inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  quickshell = config.programs.quickshell.package;
 
   qs-lint = pkgs.writeShellApplication {
     name = "qs-lint";

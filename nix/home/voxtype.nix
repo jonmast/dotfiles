@@ -1,4 +1,4 @@
-{ config, pkgs, lib, inputs, ... }:
+{ config, pkgs, lib, ... }:
 
 let
   # Whisper weights, fetched declaratively instead of via `voxtype setup
@@ -14,18 +14,24 @@ let
     hash = "sha256-oDd5yG3zMjB19eeWyyzlAp8A7Ihp7uP9+4l6/jbG0AI=";
   };
 
-  # The `onnx` package, not pkgs.voxtype: nixpkgs builds with no cargo
-  # features, so Parakeet is simply absent there — `--model
-  # parakeet-tdt-0.6b-v3` logs "Unknown model", silently loads whisper
-  # base.en, and looks like it worked. This one reports
-  # `Features: parakeet, moonshine, sensevoice, paraformer, dolphin,
-  # omnilingual, cohere`, and whisper stays available because whisper-rs is an
-  # unconditional dependency rather than a feature — one binary, both engines,
-  # which is what let the two be compared on identical everything else.
+  # Plain nixpkgs voxtype builds with no cargo features, so Parakeet is simply
+  # absent there — `--model parakeet-tdt-0.6b-v3` logs "Unknown model",
+  # silently loads whisper base.en, and looks like it worked. `onnxSupport`
+  # turns on the ONNX backends (parakeet-load-dynamic, moonshine, sensevoice,
+  # paraformer, dolphin, omnilingual) and wraps the daemon with ORT_DYLIB_PATH
+  # pointing at the prebuilt onnxruntime. whisper-rs stays an unconditional
+  # dependency rather than a feature, so one binary still has both engines —
+  # which is what lets voxtype-eval score them on identical everything else.
+  #
+  # Upstream's own flake enables one feature more — `cohere` — in its `onnx`
+  # package. Deliberately absent here: it is a separate engine this config does
+  # not use, and nixpkgs' set is otherwise the same.
   #
   # ~280 derivations to build, all small Rust crates; onnxruntime comes
   # prebuilt from cache.nixos.org because upstream links it dynamically
-  # (parakeet-load-dynamic) instead of vendoring it.
+  # (parakeet-load-dynamic) instead of vendoring it. Nothing about this
+  # derivation is cache-substituted, so every nixpkgs bump that touches it
+  # still costs that local build.
   #
   # No GPU variant. Whisper could use `vulkan` (GGML has a vendor-neutral
   # Vulkan backend), but ONNX Runtime has no Vulkan execution provider at all,
@@ -33,7 +39,7 @@ let
   # gfx1103 (Phoenix1, confirmed via /sys/class/kfd), which ROCm does not
   # officially support. Parakeet here is CPU-only by construction, and at
   # 0.21s per clip that is entirely fine.
-  package = inputs.voxtype.packages.${pkgs.stdenv.hostPlatform.system}.onnx;
+  package = pkgs.voxtype.override { onnxSupport = true; };
 
   # Parakeet weights: the transcription engine as of the 2026-09 bake-off.
   #
@@ -91,8 +97,12 @@ let
       # Graph and weights are separate files that must land in one directory.
       decoder = get "fp32/decoder_joint-model.onnx"
         "sha256-f6BcUYPfyJ27DzTUsueTX4d3YvJDi7zHlyn04tAOsEE=";
+      # Re-pinned 2026-11-07: upstream replaced this file's contents in place
+      # (previous sha256-ZGWxpbMptR8kPeWFAoq+M36NOhlMCZLA3mxq7MFFb+8=). The
+      # decoder graph, encoder, vocab and config hashes were all unchanged, so
+      # only the weights moved. If dictation quality drops, suspect this file.
       decoderData = get "fp32/decoder_joint-model.onnx.data"
-        "sha256-ZGWxpbMptR8kPeWFAoq+M36NOhlMCZLA3mxq7MFFb+8=";
+        "sha256-b30YmgiobkenGWSCAJ0UVu9+J3xYmY6xwDrIW5urmKc=";
 
       vocab = get "vocab.txt"
         "sha256-1YVEZ56kvGrFY9H1Ret9R0vWz6Rn8KbiwdwcfTfjw10=";
@@ -118,9 +128,10 @@ let
 
   # The OSD, reassembled from parts nixpkgs ships separately.
   #
-  # nixpkgs builds voxtype with no cargo features, so the two real renderer
-  # binaries never get built: `voxtype-osd-gtk4` needs `required-features =
-  # ["osd-gtk4"]` and `voxtype-osd-native` needs ["osd-native"] (Cargo.toml).
+  # `onnxSupport` turns on the transcription features only; the two real
+  # renderer binaries still never get built, because `voxtype-osd-gtk4` needs
+  # `required-features = ["osd-gtk4"]` and `voxtype-osd-native` needs
+  # ["osd-native"] (Cargo.toml) and nixpkgs exposes no option for either.
   # What survives is `voxtype-osd` (the dispatcher) and
   # `voxtype-osd-quickshell` — the two with no required-features. The
   # dispatcher defaults to frontend "gtk4", fails to find that binary, and
@@ -134,17 +145,13 @@ let
   # supervisor gave up after three tries in 5s.
   #
   # Both halves are ours to supply: point the frontend at quickshell (below)
-  # and install the QML here. Taken from the flake input rather than a fresh
-  # fetch precisely because that is the same source the binary was built
-  # from — the QML talks to the daemon over a versioned state file and audio
-  # socket, so a mismatched tree is the one real hazard, and this makes a
-  # mismatch impossible by construction.
-  #
-  # `inputs.voxtype`, not `package.src`: the packages the flake exposes are
-  # symlinkJoin wrappers (they add ORT_DYLIB_PATH and the runtime PATH), and a
-  # symlinkJoin inherits only `meta` from what it wraps, so `package.src` does
-  # not exist. The input itself is the v1.0.1 tree the build used.
-  osdQml = "${inputs.voxtype}/quickshell";
+  # and install the QML here. Taken from `package.src` rather than a fresh
+  # fetch precisely because that is the same source the binary was built from —
+  # the QML talks to the daemon over a versioned state file and audio socket,
+  # so a mismatched tree is the one real hazard, and this makes a mismatch
+  # impossible by construction. nixpkgs keeps `src` as a plain derivation
+  # attribute, even though `__structuredAttrs` takes it out of the build env.
+  osdQml = "${package.src}/quickshell";
 
   # Transcription-quality harness. Built to tune `whisper.initial_prompt`; the
   # answer it produced was "don't". Across a 47-clip corpus the best prompt
