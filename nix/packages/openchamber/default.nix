@@ -70,11 +70,11 @@ stdenv.mkDerivation (finalAttrs: let
   };
 in {
   pname = "openchamber-desktop";
-  version = "2.5.0";
+  version = "2.6.1";
 
   src = fetchurl {
     url = "https://github.com/openchamber/openchamber/releases/download/v${finalAttrs.version}/OpenChamber-${finalAttrs.version}-linux-x86_64.AppImage";
-    hash = "sha256-+QUnw1N9KMPwnJp/mv/G/S73NzFwm588kuMlwVeuGc8=";
+    hash = "sha256-C3cY4LaUZ/bF+Di09i97uu66q8UrYmPsBltY4PN4YIs=";
   };
 
   nativeBuildInputs = [

@@ -5,11 +5,11 @@
 
 stdenv.mkDerivation rec {
   pname = "lazyskills";
-  version = "1.0.1";
+  version = "1.2.0";
 
   src = fetchurl {
     url = "https://github.com/alvinunreal/lazyskills/releases/download/v${version}/lazyskills_Linux_x86_64.tar.gz";
-    sha256 = "0k4psv9k0v9wd2awj7hqc742k32wh7qlj0dkm0icj7mqrd9vpgvb";
+    sha256 = "0bx5j17fijmarmbrcvkcb1avjmiyhj0y5k3d3a7yxmcx462mklzn";
   };
 
   sourceRoot = ".";

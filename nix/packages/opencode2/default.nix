@@ -38,11 +38,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "opencode2";
-  version = "2.2.0";
+  version = "2.2.6";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-${finalAttrs.version}.tgz";
-    hash = "sha256-/jBGuGhy5iT2ImgFj0gBofHv/8GTEDqZiCOMiRuMoCg=";
+    hash = "sha256-381p8dURrhDtYmdotB2EuBAMxKpkzstp2ji6einTNVE=";
   };
 
   nativeBuildInputs = [

@@ -5,12 +5,12 @@
 
 python3Packages.buildPythonApplication rec {
   pname = "opencode-monitor";
-  version = "1.0.4";
+  version = "1.0.5";
   pyproject = true;
 
   src = fetchurl {
-    url = "https://files.pythonhosted.org/packages/46/d3/026ced16f0d8d2040eef54762389b41871a51f79eacb45a5a8cfcc6bfb6c/opencode_monitor-${version}.tar.gz";
-    sha256 = "1krp7plgak3wqmc2pmwc8nhcg46hnnvz6b5n7lvw180dycyidix2";
+    url = "https://files.pythonhosted.org/packages/86/86/ed190499e5edbb8717cea8e01956601a6b9907ed86316818ad92faa29654/opencode_monitor-${version}.tar.gz";
+    sha256 = "12v98j9nz96ygapmmf3yx6lm9hvna1p6qcp8cmdfk9jyg45zrcqw";
   };
 
   build-system = with python3Packages; [
